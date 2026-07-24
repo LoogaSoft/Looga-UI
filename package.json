@@ -1,0 +1,12 @@
+﻿{
+  "displayName": "Looga UI FX",
+  "name": "com.loogasoft.loogauifx",
+  "description": "Reusable UGUI visual effects for LoogaSoft projects, including shadows, soft masks, outlines, gradients, and shine highlights.",
+  "version": "1.0.0",
+  "author": {
+    "name": "LoogaSoft"
+  },
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  }
+}
