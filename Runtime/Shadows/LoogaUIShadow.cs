@@ -43,6 +43,7 @@ namespace LoogaSoft.UIFX
         RawImage _shadowImage;
         RectTransform _shadowRect;
         LayoutElement _shadowLayoutElement;
+        GameObject _shadowObject;
         Texture2D _shadowTexture;
         Sprite _lastSprite;
         Rect _lastRect;
@@ -195,10 +196,7 @@ namespace LoogaSoft.UIFX
 #endif
             ReleaseGeneratedTexture();
 
-            if (_shadowImage != null)
-            {
-                DestroyGeneratedObject(_shadowImage.gameObject);
-            }
+            ReleaseRenderer();
         }
 
         void OnValidate()
@@ -342,6 +340,7 @@ namespace LoogaSoft.UIFX
             _shadowRect = shadowObject.GetComponent<RectTransform>();
             _shadowImage = shadowObject.GetComponent<RawImage>();
             _shadowLayoutElement = shadowObject.GetComponent<LayoutElement>();
+            _shadowObject = shadowObject;
             EnsureIgnoredByLayout();
             _shadowImage.raycastTarget = false;
             _shadowImage.maskable = _graphic is not MaskableGraphic maskableGraphic || maskableGraphic.maskable;
@@ -1189,8 +1188,25 @@ namespace LoogaSoft.UIFX
                 return;
             }
 
-            DestroyGeneratedObject(_shadowTexture);
+            Texture2D texture = _shadowTexture;
             _shadowTexture = null;
+            DestroyGeneratedObject(texture);
+        }
+
+        void ReleaseRenderer()
+        {
+            GameObject shadowObject = _shadowObject != null ? _shadowObject : _shadowImage != null ? _shadowImage.gameObject : null;
+            _shadowObject = null;
+            _shadowImage = null;
+            _shadowRect = null;
+            _shadowLayoutElement = null;
+
+            if (shadowObject == null)
+            {
+                return;
+            }
+
+            DestroyGeneratedObject(shadowObject);
         }
 
         readonly struct ShadowBuildRequest
