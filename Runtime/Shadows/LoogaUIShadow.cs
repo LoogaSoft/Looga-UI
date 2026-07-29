@@ -743,11 +743,21 @@ namespace LoogaSoft.UIFX
             _shadowRect.anchorMin = new Vector2(0.5f, 0.5f);
             _shadowRect.anchorMax = new Vector2(0.5f, 0.5f);
             _shadowRect.pivot = new Vector2(0.5f, 0.5f);
-            _shadowRect.anchoredPosition = (Vector2)bounds.center + (_mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero);
+            Vector2 anchoredCenter = (Vector2)bounds.center - GetAnchorReferencePoint(parent, _shadowRect.anchorMin, _shadowRect.anchorMax);
+            _shadowRect.anchoredPosition = anchoredCenter + (_mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero);
             _shadowRect.sizeDelta = (Vector2)bounds.size + Vector2.one * (_lastPadding * 2f);
             _shadowRect.localScale = Vector3.one;
             _shadowRect.localRotation = Quaternion.identity;
             SetRendererSibling();
+        }
+
+        static Vector2 GetAnchorReferencePoint(RectTransform parent, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            Rect parentRect = parent.rect;
+            Vector2 anchorCenter = (anchorMin + anchorMax) * 0.5f;
+            return new Vector2(
+                Mathf.Lerp(parentRect.xMin, parentRect.xMax, anchorCenter.x),
+                Mathf.Lerp(parentRect.yMin, parentRect.yMax, anchorCenter.y));
         }
 
         void SetRendererSibling()
