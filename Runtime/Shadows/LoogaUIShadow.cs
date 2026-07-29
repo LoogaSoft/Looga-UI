@@ -26,7 +26,10 @@ namespace LoogaSoft.UIFX
         [SerializeField, Min(0f)] float _spread = 2f;
         [SerializeField, Range(MinResolutionScale, MaxResolutionScale)] float _resolutionScale = 0.5f;
         [SerializeField] LoogaUIShadowQuality _quality = LoogaUIShadowQuality.Medium;
-        [SerializeField] bool _useSourceAlpha = true;
+        [SerializeField, Tooltip("Uses the source sprite alpha when building the shadow mask. Falls back to a rectangle if the texture cannot be sampled.")]
+        bool _useSourceAlpha = true;
+        [SerializeField, Tooltip("Removes outer shadow pixels that would render behind the source graphic.")]
+        bool _clipOuterShadowBehindSource = true;
         [SerializeField] bool _deallocateOnDisable = true;
 #if LOOGA_UIFX_UNITASK_SUPPORT
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
@@ -130,6 +133,21 @@ namespace LoogaSoft.UIFX
                 }
 
                 _spread = value;
+                MarkDirty();
+            }
+        }
+
+        public bool ClipOuterShadowBehindSource
+        {
+            get => _clipOuterShadowBehindSource;
+            set
+            {
+                if (_clipOuterShadowBehindSource == value)
+                {
+                    return;
+                }
+
+                _clipOuterShadowBehindSource = value;
                 MarkDirty();
             }
         }
@@ -282,6 +300,7 @@ namespace LoogaSoft.UIFX
                 hash = hash * 31 + _resolutionScale.GetHashCode();
                 hash = hash * 31 + _quality.GetHashCode();
                 hash = hash * 31 + _useSourceAlpha.GetHashCode();
+                hash = hash * 31 + _clipOuterShadowBehindSource.GetHashCode();
                 return hash;
             }
         }
@@ -347,12 +366,12 @@ namespace LoogaSoft.UIFX
                 return false;
             }
 
-            _lastPadding = Mathf.Ceil(_softness + _spread + 2f);
+            _lastPadding = Mathf.Ceil(_spread + _softness * GetBlurPasses() + 2f);
             int width = Mathf.Clamp(Mathf.CeilToInt((size.x + _lastPadding * 2f) * _resolutionScale), 1, MaxGeneratedSize);
             int height = Mathf.Clamp(Mathf.CeilToInt((size.y + _lastPadding * 2f) * _resolutionScale), 1, MaxGeneratedSize);
             float[] sourceAlpha = new float[width * height];
             WriteSourceAlpha(sourceAlpha, width, height, size);
-            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha);
+            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha, _clipOuterShadowBehindSource);
             return true;
         }
 
@@ -426,7 +445,8 @@ namespace LoogaSoft.UIFX
 
         static Color32[] BuildOuterShadowPixels(ShadowBuildRequest request)
         {
-            float[] sourceAlpha = request.SourceAlpha;
+            float[] originalAlpha = request.SourceAlpha;
+            float[] sourceAlpha = originalAlpha;
             int spreadRadius = Mathf.RoundToInt(request.Spread * request.ResolutionScale);
             if (spreadRadius > 0)
             {
@@ -441,10 +461,22 @@ namespace LoogaSoft.UIFX
             byte r = FloatToByte(request.Color.r);
             byte g = FloatToByte(request.Color.g);
             byte b = FloatToByte(request.Color.b);
+            int offsetX = Mathf.RoundToInt(request.Offset.x * request.ResolutionScale);
+            int offsetY = Mathf.RoundToInt(request.Offset.y * request.ResolutionScale);
 
-            for (int i = 0; i < pixels.Length; i++)
+            for (int y = 0; y < request.Height; y++)
             {
-                pixels[i] = new Color32(r, g, b, FloatToByte(sourceAlpha[i] * alphaScale));
+                for (int x = 0; x < request.Width; x++)
+                {
+                    int index = y * request.Width + x;
+                    float alpha = sourceAlpha[index];
+                    if (request.ClipOuterShadowBehindSource)
+                    {
+                        alpha *= 1f - SampleAlpha(originalAlpha, request.Width, request.Height, x + offsetX, y + offsetY);
+                    }
+
+                    pixels[index] = new Color32(r, g, b, FloatToByte(alpha * alphaScale));
+                }
             }
 
             return pixels;
@@ -530,11 +562,7 @@ namespace LoogaSoft.UIFX
             Rect textureRect = sprite.textureRect;
             Color32[] sourcePixels;
 
-            try
-            {
-                sourcePixels = texture.GetPixels32();
-            }
-            catch (Exception exception) when (exception is UnityException || exception is ArgumentException)
+            if (!TryReadTexturePixels(texture, out sourcePixels))
             {
                 if (!_warnedUnreadableTexture)
                 {
@@ -567,15 +595,78 @@ namespace LoogaSoft.UIFX
                         continue;
                     }
 
-                    if (image != null && !IsVisibleForFill(image, localX, localY))
+                    float imageLocalX = localX;
+                    float imageLocalY = localY;
+                    if (image != null && !TryResolveImageLocalUv(image, localX, localY, sourceSize, out imageLocalX, out imageLocalY))
                     {
                         continue;
                     }
 
-                    Vector2 spriteUv = image != null ? ResolveImageUv(image, localX, localY, sourceSize) : new Vector2(localX, localY);
+                    if (image != null && !IsVisibleForFill(image, imageLocalX, imageLocalY))
+                    {
+                        continue;
+                    }
+
+                    Vector2 spriteUv = image != null ? ResolveImageUv(image, imageLocalX, imageLocalY, sourceSize) : new Vector2(localX, localY);
                     int sourceX = Mathf.Clamp(Mathf.RoundToInt(textureRect.x + spriteUv.x * (textureRect.width - 1f)), 0, texture.width - 1);
                     int sourceY = Mathf.Clamp(Mathf.RoundToInt(textureRect.y + spriteUv.y * (textureRect.height - 1f)), 0, texture.height - 1);
                     alpha[y * width + x] = sourcePixels[sourceY * texture.width + sourceX].a / 255f;
+                }
+            }
+        }
+
+        static bool TryReadTexturePixels(Texture2D texture, out Color32[] pixels)
+        {
+            try
+            {
+                pixels = texture.GetPixels32();
+                return true;
+            }
+            catch (Exception exception) when (exception is UnityException || exception is ArgumentException)
+            {
+            }
+
+            return TryReadTexturePixelsFromRenderTexture(texture, out pixels);
+        }
+
+        static bool TryReadTexturePixelsFromRenderTexture(Texture2D texture, out Color32[] pixels)
+        {
+            pixels = null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture renderTexture = null;
+            Texture2D readableTexture = null;
+
+            try
+            {
+                renderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+                Graphics.Blit(texture, renderTexture);
+                RenderTexture.active = renderTexture;
+
+                readableTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false)
+                {
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                readableTexture.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0, false);
+                readableTexture.Apply(false, false);
+                pixels = readableTexture.GetPixels32();
+                return true;
+            }
+            catch (Exception exception) when (exception is UnityException || exception is ArgumentException)
+            {
+                pixels = null;
+                return false;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (renderTexture != null)
+                {
+                    RenderTexture.ReleaseTemporary(renderTexture);
+                }
+
+                if (readableTexture != null)
+                {
+                    DestroyGeneratedObject(readableTexture);
                 }
             }
         }
@@ -673,15 +764,15 @@ namespace LoogaSoft.UIFX
 
                 for (int x = -radius; x <= radius; x++)
                 {
-                    sum += source[row + Mathf.Clamp(x, 0, width - 1)];
+                    sum += SampleAlpha(source, width, height, x, y);
                 }
 
                 for (int x = 0; x < width; x++)
                 {
                     temp[row + x] = sum / diameter;
-                    int removeX = Mathf.Clamp(x - radius, 0, width - 1);
-                    int addX = Mathf.Clamp(x + radius + 1, 0, width - 1);
-                    sum += source[row + addX] - source[row + removeX];
+                    int removeX = x - radius;
+                    int addX = x + radius + 1;
+                    sum += SampleAlpha(source, width, height, addX, y) - SampleAlpha(source, width, height, removeX, y);
                 }
             }
 
@@ -691,15 +782,15 @@ namespace LoogaSoft.UIFX
 
                 for (int y = -radius; y <= radius; y++)
                 {
-                    sum += temp[Mathf.Clamp(y, 0, height - 1) * width + x];
+                    sum += SampleAlpha(temp, width, height, x, y);
                 }
 
                 for (int y = 0; y < height; y++)
                 {
                     target[y * width + x] = sum / diameter;
-                    int removeY = Mathf.Clamp(y - radius, 0, height - 1);
-                    int addY = Mathf.Clamp(y + radius + 1, 0, height - 1);
-                    sum += temp[addY * width + x] - temp[removeY * width + x];
+                    int removeY = y - radius;
+                    int addY = y + radius + 1;
+                    sum += SampleAlpha(temp, width, height, x, addY) - SampleAlpha(temp, width, height, x, removeY);
                 }
             }
         }
@@ -730,6 +821,16 @@ namespace LoogaSoft.UIFX
             }
         }
 
+        static float SampleAlpha(float[] alpha, int width, int height, int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= width || y >= height)
+            {
+                return 0f;
+            }
+
+            return alpha[y * width + x];
+        }
+
         static byte FloatToByte(float value)
         {
             return (byte)Mathf.Clamp(Mathf.RoundToInt(value * 255f), 0, 255);
@@ -743,6 +844,49 @@ namespace LoogaSoft.UIFX
                 Image.Type.Tiled => ResolveTiledUv(image, normalizedX, normalizedY, sourceSize),
                 _ => new Vector2(normalizedX, normalizedY)
             };
+        }
+
+        static bool TryResolveImageLocalUv(Image image, float normalizedX, float normalizedY, Vector2 sourceSize, out float imageX, out float imageY)
+        {
+            imageX = normalizedX;
+            imageY = normalizedY;
+
+            if (!image.preserveAspect || image.sprite == null || image.type == Image.Type.Sliced || image.type == Image.Type.Tiled)
+            {
+                return true;
+            }
+
+            float spriteWidth = Mathf.Max(0.0001f, image.sprite.rect.width);
+            float spriteHeight = Mathf.Max(0.0001f, image.sprite.rect.height);
+            float spriteAspect = spriteWidth / spriteHeight;
+            float rectWidth = Mathf.Max(0.0001f, sourceSize.x);
+            float rectHeight = Mathf.Max(0.0001f, sourceSize.y);
+            float rectAspect = rectWidth / rectHeight;
+
+            if (rectAspect > spriteAspect)
+            {
+                float imageWidth = rectHeight * spriteAspect;
+                float left = (rectWidth - imageWidth) * 0.5f;
+                float localX = normalizedX * rectWidth;
+                if (localX < left || localX > left + imageWidth)
+                {
+                    return false;
+                }
+
+                imageX = Mathf.InverseLerp(left, left + imageWidth, localX);
+                return true;
+            }
+
+            float imageHeight = rectWidth / spriteAspect;
+            float bottom = (rectHeight - imageHeight) * 0.5f;
+            float localY = normalizedY * rectHeight;
+            if (localY < bottom || localY > bottom + imageHeight)
+            {
+                return false;
+            }
+
+            imageY = Mathf.InverseLerp(bottom, bottom + imageHeight, localY);
+            return true;
         }
 
         static Vector2 ResolveSlicedUv(Image image, float normalizedX, float normalizedY, Vector2 sourceSize)
@@ -941,7 +1085,8 @@ namespace LoogaSoft.UIFX
                 int blurPasses,
                 int width,
                 int height,
-                float[] sourceAlpha)
+                float[] sourceAlpha,
+                bool clipOuterShadowBehindSource)
             {
                 Mode = mode;
                 Color = color;
@@ -953,6 +1098,7 @@ namespace LoogaSoft.UIFX
                 Width = width;
                 Height = height;
                 SourceAlpha = sourceAlpha;
+                ClipOuterShadowBehindSource = clipOuterShadowBehindSource;
             }
 
             public readonly LoogaUIShadowMode Mode;
@@ -965,6 +1111,7 @@ namespace LoogaSoft.UIFX
             public readonly int Width;
             public readonly int Height;
             public readonly float[] SourceAlpha;
+            public readonly bool ClipOuterShadowBehindSource;
         }
     }
 }
