@@ -608,6 +608,11 @@ namespace LoogaSoft.UIFX
                     }
 
                     Vector2 spriteUv = image != null ? ResolveImageUv(image, imageLocalX, imageLocalY, sourceSize) : new Vector2(localX, localY);
+                    if (spriteUv.x < 0f || spriteUv.y < 0f)
+                    {
+                        continue;
+                    }
+
                     int sourceX = Mathf.Clamp(Mathf.RoundToInt(textureRect.x + spriteUv.x * (textureRect.width - 1f)), 0, texture.width - 1);
                     int sourceY = Mathf.Clamp(Mathf.RoundToInt(textureRect.y + spriteUv.y * (textureRect.height - 1f)), 0, texture.height - 1);
                     alpha[y * width + x] = sourcePixels[sourceY * texture.width + sourceX].a / 255f;
@@ -899,7 +904,7 @@ namespace LoogaSoft.UIFX
 
             Vector4 border = sprite.border;
             Rect textureRect = sprite.textureRect;
-            float pixelsPerUnit = Mathf.Max(0.0001f, image.pixelsPerUnit);
+            float pixelsPerUnit = GetMultipliedPixelsPerUnit(image);
             Vector4 localBorder = new(border.x / pixelsPerUnit, border.y / pixelsPerUnit, border.z / pixelsPerUnit, border.w / pixelsPerUnit);
 
             ClampBorderToSize(ref localBorder.x, ref localBorder.z, sourceSize.x);
@@ -907,6 +912,11 @@ namespace LoogaSoft.UIFX
 
             float localX = normalizedX * sourceSize.x;
             float localY = normalizedY * sourceSize.y;
+            if (!image.fillCenter && IsInsideCenter(localX, localY, sourceSize, localBorder))
+            {
+                return new Vector2(-1f, -1f);
+            }
+
             float uvX = ResolveSlicedAxis(localX, sourceSize.x, localBorder.x, localBorder.z, border.x, border.z, textureRect.width);
             float uvY = ResolveSlicedAxis(localY, sourceSize.y, localBorder.y, localBorder.w, border.y, border.w, textureRect.height);
             return new Vector2(uvX, uvY);
@@ -920,13 +930,37 @@ namespace LoogaSoft.UIFX
                 return new Vector2(normalizedX, normalizedY);
             }
 
-            float pixelsPerUnit = Mathf.Max(0.0001f, image.pixelsPerUnit);
+            float pixelsPerUnit = GetMultipliedPixelsPerUnit(image);
             Rect textureRect = sprite.textureRect;
-            float localX = normalizedX * sourceSize.x * pixelsPerUnit;
-            float localY = normalizedY * sourceSize.y * pixelsPerUnit;
-            float uvX = textureRect.width > 0f ? Mathf.Repeat(localX, textureRect.width) / textureRect.width : normalizedX;
-            float uvY = textureRect.height > 0f ? Mathf.Repeat(localY, textureRect.height) / textureRect.height : normalizedY;
+            Vector4 border = sprite.border;
+            Vector4 localBorder = new(border.x / pixelsPerUnit, border.y / pixelsPerUnit, border.z / pixelsPerUnit, border.w / pixelsPerUnit);
+
+            ClampBorderToSize(ref localBorder.x, ref localBorder.z, sourceSize.x);
+            ClampBorderToSize(ref localBorder.y, ref localBorder.w, sourceSize.y);
+
+            float localX = normalizedX * sourceSize.x;
+            float localY = normalizedY * sourceSize.y;
+            if (!image.fillCenter && IsInsideCenter(localX, localY, sourceSize, localBorder))
+            {
+                return new Vector2(-1f, -1f);
+            }
+
+            float uvX = ResolveTiledAxis(localX, sourceSize.x, localBorder.x, localBorder.z, border.x, border.z, textureRect.width, pixelsPerUnit);
+            float uvY = ResolveTiledAxis(localY, sourceSize.y, localBorder.y, localBorder.w, border.y, border.w, textureRect.height, pixelsPerUnit);
             return new Vector2(uvX, uvY);
+        }
+
+        static float GetMultipliedPixelsPerUnit(Image image)
+        {
+            return Mathf.Max(0.0001f, image.pixelsPerUnit * image.pixelsPerUnitMultiplier);
+        }
+
+        static bool IsInsideCenter(float localX, float localY, Vector2 sourceSize, Vector4 border)
+        {
+            return localX > border.x &&
+                   localX < sourceSize.x - border.z &&
+                   localY > border.y &&
+                   localY < sourceSize.y - border.w;
         }
 
         static float ResolveSlicedAxis(float local, float size, float localStartBorder, float localEndBorder, float spriteStartBorder, float spriteEndBorder, float spriteSize)
@@ -946,6 +980,24 @@ namespace LoogaSoft.UIFX
             float spriteCenterSize = Mathf.Max(0.0001f, spriteSize - spriteStartBorder - spriteEndBorder);
             float centerT = Mathf.Clamp01((local - localStartBorder) / centerSize);
             return Mathf.Clamp01((spriteStartBorder + centerT * spriteCenterSize) / spriteSize);
+        }
+
+        static float ResolveTiledAxis(float local, float size, float localStartBorder, float localEndBorder, float spriteStartBorder, float spriteEndBorder, float spriteSize, float pixelsPerUnit)
+        {
+            if (local <= localStartBorder && localStartBorder > 0f)
+            {
+                return Mathf.Clamp01(local / localStartBorder * spriteStartBorder / spriteSize);
+            }
+
+            if (local >= size - localEndBorder && localEndBorder > 0f)
+            {
+                float distanceFromEnd = size - local;
+                return Mathf.Clamp01(1f - distanceFromEnd / localEndBorder * spriteEndBorder / spriteSize);
+            }
+
+            float spriteCenterSize = Mathf.Max(0.0001f, spriteSize - spriteStartBorder - spriteEndBorder);
+            float localCenter = Mathf.Max(0f, local - localStartBorder) * pixelsPerUnit;
+            return Mathf.Clamp01((spriteStartBorder + Mathf.Repeat(localCenter, spriteCenterSize)) / spriteSize);
         }
 
         static void ClampBorderToSize(ref float start, ref float end, float size)
