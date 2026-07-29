@@ -42,6 +42,7 @@ namespace LoogaSoft.UIFX
         RectTransform _rectTransform;
         RawImage _shadowImage;
         RectTransform _shadowRect;
+        LayoutElement _shadowLayoutElement;
         Texture2D _shadowTexture;
         Sprite _lastSprite;
         Rect _lastRect;
@@ -323,6 +324,7 @@ namespace LoogaSoft.UIFX
             if (_shadowImage != null)
             {
                 _shadowImage.enabled = isActiveAndEnabled;
+                EnsureIgnoredByLayout();
                 return;
             }
 
@@ -332,16 +334,38 @@ namespace LoogaSoft.UIFX
                 return;
             }
 
-            GameObject shadowObject = new(ShadowObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            GameObject shadowObject = new(ShadowObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage), typeof(LayoutElement));
             shadowObject.hideFlags = HideFlags.HideAndDontSave;
             shadowObject.transform.SetParent(parent, false);
             shadowObject.transform.SetSiblingIndex(transform.GetSiblingIndex());
 
             _shadowRect = shadowObject.GetComponent<RectTransform>();
             _shadowImage = shadowObject.GetComponent<RawImage>();
+            _shadowLayoutElement = shadowObject.GetComponent<LayoutElement>();
+            EnsureIgnoredByLayout();
             _shadowImage.raycastTarget = false;
             _shadowImage.maskable = _graphic is not MaskableGraphic maskableGraphic || maskableGraphic.maskable;
             _shadowImage.enabled = isActiveAndEnabled;
+        }
+
+        void EnsureIgnoredByLayout()
+        {
+            if (_shadowImage == null)
+            {
+                return;
+            }
+
+            if (_shadowLayoutElement == null)
+            {
+                _shadowLayoutElement = _shadowImage.GetComponent<LayoutElement>();
+            }
+
+            if (_shadowLayoutElement == null)
+            {
+                _shadowLayoutElement = _shadowImage.gameObject.AddComponent<LayoutElement>();
+            }
+
+            _shadowLayoutElement.ignoreLayout = true;
         }
 
         void RebuildShadow()
@@ -739,7 +763,7 @@ namespace LoogaSoft.UIFX
                 return;
             }
 
-            Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(parent, _rectTransform);
+            Bounds bounds = CalculateSourceRectBounds(parent, _rectTransform);
             _shadowRect.anchorMin = new Vector2(0.5f, 0.5f);
             _shadowRect.anchorMax = new Vector2(0.5f, 0.5f);
             _shadowRect.pivot = new Vector2(0.5f, 0.5f);
@@ -749,6 +773,27 @@ namespace LoogaSoft.UIFX
             _shadowRect.localScale = Vector3.one;
             _shadowRect.localRotation = Quaternion.identity;
             SetRendererSibling();
+        }
+
+        static Bounds CalculateSourceRectBounds(RectTransform parent, RectTransform source)
+        {
+            Rect sourceRect = source.rect;
+            Vector3 min = parent.InverseTransformPoint(source.TransformPoint(new Vector3(sourceRect.xMin, sourceRect.yMin, 0f)));
+            Vector3 max = min;
+
+            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMin, sourceRect.yMax);
+            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMax, sourceRect.yMax);
+            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMax, sourceRect.yMin);
+
+            Bounds bounds = new((min + max) * 0.5f, max - min);
+            return bounds;
+        }
+
+        static void EncapsulateParentLocalPoint(ref Vector3 min, ref Vector3 max, RectTransform parent, RectTransform source, float x, float y)
+        {
+            Vector3 point = parent.InverseTransformPoint(source.TransformPoint(new Vector3(x, y, 0f)));
+            min = Vector3.Min(min, point);
+            max = Vector3.Max(max, point);
         }
 
         static Vector2 GetAnchorReferencePoint(RectTransform parent, Vector2 anchorMin, Vector2 anchorMax)
