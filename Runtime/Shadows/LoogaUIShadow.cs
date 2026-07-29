@@ -166,6 +166,7 @@ namespace LoogaSoft.UIFX
         {
             CacheComponents();
             RegisterGraphicCallbacks();
+            RegisterCanvasCallbacks();
             EnsureRenderer();
             MarkDirty();
         }
@@ -173,6 +174,7 @@ namespace LoogaSoft.UIFX
         void OnDisable()
         {
             UnregisterGraphicCallbacks();
+            UnregisterCanvasCallbacks();
 #if LOOGA_UIFX_UNITASK_SUPPORT
             CancelAsyncRebuild();
 #endif
@@ -191,6 +193,7 @@ namespace LoogaSoft.UIFX
         void OnDestroy()
         {
             UnregisterGraphicCallbacks();
+            UnregisterCanvasCallbacks();
 #if LOOGA_UIFX_UNITASK_SUPPORT
             CancelAsyncRebuild();
 #endif
@@ -270,6 +273,12 @@ namespace LoogaSoft.UIFX
             _graphic.RegisterDirtyVerticesCallback(MarkDirty);
         }
 
+        void RegisterCanvasCallbacks()
+        {
+            Canvas.willRenderCanvases -= UpdateRendererTransform;
+            Canvas.willRenderCanvases += UpdateRendererTransform;
+        }
+
         void UnregisterGraphicCallbacks()
         {
             if (_graphic == null)
@@ -279,6 +288,11 @@ namespace LoogaSoft.UIFX
 
             _graphic.UnregisterDirtyMaterialCallback(MarkDirty);
             _graphic.UnregisterDirtyVerticesCallback(MarkDirty);
+        }
+
+        void UnregisterCanvasCallbacks()
+        {
+            Canvas.willRenderCanvases -= UpdateRendererTransform;
         }
 
         bool HasSourceChanged()
@@ -756,7 +770,7 @@ namespace LoogaSoft.UIFX
 
         void UpdateRendererTransform()
         {
-            if (_shadowRect == null || _rectTransform == null || transform.parent is not RectTransform)
+            if (_shadowRect == null || _rectTransform == null || transform.parent is not RectTransform parent)
             {
                 return;
             }
@@ -764,15 +778,14 @@ namespace LoogaSoft.UIFX
             EnsureIgnoredByLayout();
 
             Vector2 padding = Vector2.one * (_lastPadding * 2f);
-            Vector2 pivotPaddingOffset = new(
-                (_rectTransform.pivot.x - 0.5f) * padding.x,
-                (_rectTransform.pivot.y - 0.5f) * padding.y);
+            Vector3 sourceCenter = parent.InverseTransformPoint(_rectTransform.TransformPoint(_rectTransform.rect.center));
+            Vector2 offset = _mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero;
 
-            _shadowRect.anchorMin = _rectTransform.anchorMin;
-            _shadowRect.anchorMax = _rectTransform.anchorMax;
-            _shadowRect.pivot = _rectTransform.pivot;
-            _shadowRect.anchoredPosition = _rectTransform.anchoredPosition + pivotPaddingOffset + (_mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero);
-            _shadowRect.sizeDelta = _rectTransform.sizeDelta + padding;
+            _shadowRect.anchorMin = new Vector2(0.5f, 0.5f);
+            _shadowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _shadowRect.pivot = new Vector2(0.5f, 0.5f);
+            _shadowRect.sizeDelta = _rectTransform.rect.size + padding;
+            _shadowRect.localPosition = new Vector3(sourceCenter.x + offset.x, sourceCenter.y + offset.y, _rectTransform.localPosition.z);
             _shadowRect.localScale = _rectTransform.localScale;
             _shadowRect.localRotation = _rectTransform.localRotation;
             SetRendererSibling();
