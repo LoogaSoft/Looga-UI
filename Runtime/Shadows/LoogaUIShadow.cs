@@ -778,16 +778,17 @@ namespace LoogaSoft.UIFX
             EnsureIgnoredByLayout();
 
             Vector2 padding = Vector2.one * (_lastPadding * 2f);
-            Vector3 sourceCenter = parent.InverseTransformPoint(_rectTransform.TransformPoint(_rectTransform.rect.center));
             Vector2 offset = _mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero;
+            Vector3 worldCenter = _rectTransform.TransformPoint(_rectTransform.rect.center);
+            Vector3 worldOffset = parent.TransformVector(offset);
 
             _shadowRect.anchorMin = new Vector2(0.5f, 0.5f);
             _shadowRect.anchorMax = new Vector2(0.5f, 0.5f);
             _shadowRect.pivot = new Vector2(0.5f, 0.5f);
             _shadowRect.sizeDelta = _rectTransform.rect.size + padding;
-            _shadowRect.localPosition = new Vector3(sourceCenter.x + offset.x, sourceCenter.y + offset.y, _rectTransform.localPosition.z);
-            _shadowRect.localScale = _rectTransform.localScale;
             _shadowRect.localRotation = _rectTransform.localRotation;
+            _shadowRect.localScale = _rectTransform.localScale;
+            _shadowRect.position = worldCenter + worldOffset;
             SetRendererSibling();
         }
 
