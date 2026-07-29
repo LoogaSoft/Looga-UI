@@ -534,7 +534,7 @@ namespace LoogaSoft.UIFX
             {
                 sourcePixels = texture.GetPixels32();
             }
-            catch (UnityException)
+            catch (Exception exception) when (exception is UnityException || exception is ArgumentException)
             {
                 if (!_warnedUnreadableTexture)
                 {
