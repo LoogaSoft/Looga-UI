@@ -4,6 +4,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 #endif
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace LoogaSoft.UIFX
@@ -28,8 +29,9 @@ namespace LoogaSoft.UIFX
         [SerializeField] LoogaUIShadowQuality _quality = LoogaUIShadowQuality.Medium;
         [SerializeField, Tooltip("Uses the source sprite alpha when building the shadow mask. Falls back to a rectangle if the texture cannot be sampled.")]
         bool _useSourceAlpha = true;
+        [FormerlySerializedAs("_clipOuterShadowBehindSource")]
         [SerializeField, Tooltip("Removes outer shadow pixels that would render behind the source graphic.")]
-        bool _clipOuterShadowBehindSource = true;
+        bool _clipSource = true;
         [SerializeField] bool _deallocateOnDisable = true;
 #if LOOGA_UIFX_UNITASK_SUPPORT
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
@@ -137,19 +139,25 @@ namespace LoogaSoft.UIFX
             }
         }
 
-        public bool ClipOuterShadowBehindSource
+        public bool ClipSource
         {
-            get => _clipOuterShadowBehindSource;
+            get => _clipSource;
             set
             {
-                if (_clipOuterShadowBehindSource == value)
+                if (_clipSource == value)
                 {
                     return;
                 }
 
-                _clipOuterShadowBehindSource = value;
+                _clipSource = value;
                 MarkDirty();
             }
+        }
+
+        public bool ClipOuterShadowBehindSource
+        {
+            get => ClipSource;
+            set => ClipSource = value;
         }
 
         void OnEnable()
@@ -300,7 +308,7 @@ namespace LoogaSoft.UIFX
                 hash = hash * 31 + _resolutionScale.GetHashCode();
                 hash = hash * 31 + _quality.GetHashCode();
                 hash = hash * 31 + _useSourceAlpha.GetHashCode();
-                hash = hash * 31 + _clipOuterShadowBehindSource.GetHashCode();
+                hash = hash * 31 + _clipSource.GetHashCode();
                 return hash;
             }
         }
@@ -371,7 +379,7 @@ namespace LoogaSoft.UIFX
             int height = Mathf.Clamp(Mathf.CeilToInt((size.y + _lastPadding * 2f) * _resolutionScale), 1, MaxGeneratedSize);
             float[] sourceAlpha = new float[width * height];
             WriteSourceAlpha(sourceAlpha, width, height, size);
-            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha, _clipOuterShadowBehindSource);
+            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha, _clipSource);
             return true;
         }
 
@@ -470,9 +478,9 @@ namespace LoogaSoft.UIFX
                 {
                     int index = y * request.Width + x;
                     float alpha = sourceAlpha[index];
-                    if (request.ClipOuterShadowBehindSource)
+                    if (request.ClipSource)
                     {
-                        alpha *= 1f - SampleAlpha(originalAlpha, request.Width, request.Height, x + offsetX, y + offsetY);
+                        alpha *= 1f - SampleCoverage(originalAlpha, request.Width, request.Height, x + offsetX, y + offsetY);
                     }
 
                     pixels[index] = new Color32(r, g, b, FloatToByte(alpha * alphaScale));
@@ -836,6 +844,11 @@ namespace LoogaSoft.UIFX
             return alpha[y * width + x];
         }
 
+        static float SampleCoverage(float[] alpha, int width, int height, int x, int y)
+        {
+            return SampleAlpha(alpha, width, height, x, y) > 0.001f ? 1f : 0f;
+        }
+
         static byte FloatToByte(float value)
         {
             return (byte)Mathf.Clamp(Mathf.RoundToInt(value * 255f), 0, 255);
@@ -1138,7 +1151,7 @@ namespace LoogaSoft.UIFX
                 int width,
                 int height,
                 float[] sourceAlpha,
-                bool clipOuterShadowBehindSource)
+                bool clipSource)
             {
                 Mode = mode;
                 Color = color;
@@ -1150,7 +1163,7 @@ namespace LoogaSoft.UIFX
                 Width = width;
                 Height = height;
                 SourceAlpha = sourceAlpha;
-                ClipOuterShadowBehindSource = clipOuterShadowBehindSource;
+                ClipSource = clipSource;
             }
 
             public readonly LoogaUIShadowMode Mode;
@@ -1163,7 +1176,7 @@ namespace LoogaSoft.UIFX
             public readonly int Width;
             public readonly int Height;
             public readonly float[] SourceAlpha;
-            public readonly bool ClipOuterShadowBehindSource;
+            public readonly bool ClipSource;
         }
     }
 }

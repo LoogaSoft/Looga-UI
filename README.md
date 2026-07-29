@@ -37,7 +37,7 @@ The effect can be used as an outer shadow/glow or an inner shadow/glow by changi
 3. Tune `Color`, `Offset`, `Softness`, `Spread`, `Quality`, and `Resolution Scale`.
 4. For inner effects, `Offset` biases where the inward edge appears instead of moving the renderer.
 5. Keep `Resolution Scale` below `1` for large/soft shadows unless the shape needs extra precision.
-6. Leave `Clip Outer Shadow Behind Source` enabled when transparent sprites should not be darkened by their own shadow.
+6. Leave `Clip Source` enabled when transparent sprites should not be darkened by their own shadow.
 
 ### Notes
 
