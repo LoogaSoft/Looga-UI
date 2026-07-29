@@ -334,14 +334,13 @@ namespace LoogaSoft.UIFX
 
             GameObject shadowObject = new(ShadowObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage), typeof(LayoutElement));
             shadowObject.hideFlags = HideFlags.HideAndDontSave;
-            shadowObject.transform.SetParent(parent, false);
-            shadowObject.transform.SetSiblingIndex(transform.GetSiblingIndex());
-
             _shadowRect = shadowObject.GetComponent<RectTransform>();
             _shadowImage = shadowObject.GetComponent<RawImage>();
             _shadowLayoutElement = shadowObject.GetComponent<LayoutElement>();
             _shadowObject = shadowObject;
             EnsureIgnoredByLayout();
+            shadowObject.transform.SetParent(parent, false);
+            shadowObject.transform.SetSiblingIndex(transform.GetSiblingIndex());
             _shadowImage.raycastTarget = false;
             _shadowImage.maskable = _graphic is not MaskableGraphic maskableGraphic || maskableGraphic.maskable;
             _shadowImage.enabled = isActiveAndEnabled;
@@ -757,51 +756,26 @@ namespace LoogaSoft.UIFX
 
         void UpdateRendererTransform()
         {
-            if (_shadowRect == null || _rectTransform == null || transform.parent is not RectTransform parent)
+            if (_shadowRect == null || _rectTransform == null || transform.parent is not RectTransform)
             {
                 return;
             }
 
-            Bounds bounds = CalculateSourceRectBounds(parent, _rectTransform);
-            _shadowRect.anchorMin = new Vector2(0.5f, 0.5f);
-            _shadowRect.anchorMax = new Vector2(0.5f, 0.5f);
-            _shadowRect.pivot = new Vector2(0.5f, 0.5f);
-            Vector2 anchoredCenter = (Vector2)bounds.center - GetAnchorReferencePoint(parent, _shadowRect.anchorMin, _shadowRect.anchorMax);
-            _shadowRect.anchoredPosition = anchoredCenter + (_mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero);
-            _shadowRect.sizeDelta = (Vector2)bounds.size + Vector2.one * (_lastPadding * 2f);
-            _shadowRect.localScale = Vector3.one;
-            _shadowRect.localRotation = Quaternion.identity;
+            EnsureIgnoredByLayout();
+
+            Vector2 padding = Vector2.one * (_lastPadding * 2f);
+            Vector2 pivotPaddingOffset = new(
+                (_rectTransform.pivot.x - 0.5f) * padding.x,
+                (_rectTransform.pivot.y - 0.5f) * padding.y);
+
+            _shadowRect.anchorMin = _rectTransform.anchorMin;
+            _shadowRect.anchorMax = _rectTransform.anchorMax;
+            _shadowRect.pivot = _rectTransform.pivot;
+            _shadowRect.anchoredPosition = _rectTransform.anchoredPosition + pivotPaddingOffset + (_mode == LoogaUIShadowMode.Outer ? _offset : Vector2.zero);
+            _shadowRect.sizeDelta = _rectTransform.sizeDelta + padding;
+            _shadowRect.localScale = _rectTransform.localScale;
+            _shadowRect.localRotation = _rectTransform.localRotation;
             SetRendererSibling();
-        }
-
-        static Bounds CalculateSourceRectBounds(RectTransform parent, RectTransform source)
-        {
-            Rect sourceRect = source.rect;
-            Vector3 min = parent.InverseTransformPoint(source.TransformPoint(new Vector3(sourceRect.xMin, sourceRect.yMin, 0f)));
-            Vector3 max = min;
-
-            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMin, sourceRect.yMax);
-            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMax, sourceRect.yMax);
-            EncapsulateParentLocalPoint(ref min, ref max, parent, source, sourceRect.xMax, sourceRect.yMin);
-
-            Bounds bounds = new((min + max) * 0.5f, max - min);
-            return bounds;
-        }
-
-        static void EncapsulateParentLocalPoint(ref Vector3 min, ref Vector3 max, RectTransform parent, RectTransform source, float x, float y)
-        {
-            Vector3 point = parent.InverseTransformPoint(source.TransformPoint(new Vector3(x, y, 0f)));
-            min = Vector3.Min(min, point);
-            max = Vector3.Max(max, point);
-        }
-
-        static Vector2 GetAnchorReferencePoint(RectTransform parent, Vector2 anchorMin, Vector2 anchorMax)
-        {
-            Rect parentRect = parent.rect;
-            Vector2 anchorCenter = (anchorMin + anchorMax) * 0.5f;
-            return new Vector2(
-                Mathf.Lerp(parentRect.xMin, parentRect.xMax, anchorCenter.x),
-                Mathf.Lerp(parentRect.yMin, parentRect.yMax, anchorCenter.y));
         }
 
         void SetRendererSibling()
