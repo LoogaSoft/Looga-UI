@@ -837,9 +837,28 @@ namespace LoogaSoft.UI.Extensions
 
         void ReadChildMetrics(RectTransform child, int axis, out float minimum, out float preferred, out float flexible)
         {
+            RefreshNestedLayoutMetrics(child, axis);
             minimum = LayoutUtility.GetMinSize(child, axis);
             preferred = Mathf.Max(minimum, LayoutUtility.GetPreferredSize(child, axis));
             flexible = LayoutUtility.GetFlexibleSize(child, axis);
+        }
+
+        static void RefreshNestedLayoutMetrics(RectTransform child, int axis)
+        {
+            if (!child.TryGetComponent(out LoogaLayout nestedLayout) || !nestedLayout.isActiveAndEnabled)
+            {
+                return;
+            }
+
+            // Unity can measure a parent before a nested layout has refreshed its own
+            // preferred size. Resolve nested content from the leaves upward so a
+            // content-sized chain never falls back to stale RectTransform dimensions.
+            nestedLayout.CalculateLayoutInputHorizontal();
+
+            if (axis == 1)
+            {
+                nestedLayout.CalculateLayoutInputVertical();
+            }
         }
 
         void ReadConfiguredChildMetrics(
