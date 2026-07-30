@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
-    [AddComponentMenu("LoogaSoft/UI FX/Shapes/Looga UI Custom Shape")]
+    [AddComponentMenu("LoogaSoft/UI/Shapes/Looga UI Custom Shape")]
     public sealed class LoogaUICustomShape : LoogaUIShapeGraphic
     {
         static readonly List<Vector2> LocalPoints = new();

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     sealed class LoogaUISoftMaskMaterialCache
     {
@@ -84,7 +84,7 @@ namespace LoogaSoft.UIFX
             Shader shader = DefaultShader;
             if (shader == null)
             {
-                Debug.LogWarning("Looga UI FX soft mask shader could not be found.");
+                Debug.LogWarning("Looga UI soft mask shader could not be found.");
                 return null;
             }
 
@@ -95,7 +95,7 @@ namespace LoogaSoft.UIFX
 
         Shader DefaultShader => _defaultShader != null
             ? _defaultShader
-            : (_defaultShader = Shader.Find("Hidden/LoogaSoft/UI FX/Soft Masked UI"));
+            : (_defaultShader = Shader.Find("Hidden/LoogaSoft/UI/Soft Masked UI"));
 
         static void CopyOriginalProperties(Material original, Material replacement)
         {

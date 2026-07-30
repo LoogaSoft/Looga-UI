@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
-    [AddComponentMenu("LoogaSoft/UI FX/Shapes/Looga UI Line Renderer")]
+    [AddComponentMenu("LoogaSoft/UI/Shapes/Looga UI Line Renderer")]
     public sealed class LoogaUILineRenderer : MaskableGraphic
     {
         static readonly List<Vector2> LocalPoints = new();

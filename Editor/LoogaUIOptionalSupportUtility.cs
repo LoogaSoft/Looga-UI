@@ -6,9 +6,9 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Compilation;
 
-namespace LoogaSoft.UIFX.Editor
+namespace LoogaSoft.UI.Extensions.Editor
 {
-    internal static class LoogaUIFXOptionalSupportUtility
+    internal static class LoogaUIOptionalSupportUtility
     {
         public static bool AllAssembliesAreAvailable(IReadOnlyList<string> assemblyNames, out string missingAssemblies)
         {

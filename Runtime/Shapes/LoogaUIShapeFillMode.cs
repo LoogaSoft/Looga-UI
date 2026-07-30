@@ -1,4 +1,4 @@
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     public enum LoogaUIShapeFillMode
     {

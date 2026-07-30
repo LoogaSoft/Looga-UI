@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     static class LoogaUIShapeMeshUtility
     {

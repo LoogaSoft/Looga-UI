@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX.Editor
+namespace LoogaSoft.UI.Extensions.Editor
 {
     [CustomEditor(typeof(LoogaUICustomShape))]
     sealed class LoogaUICustomShapePointEditor : LoogaUIShapePointEditor

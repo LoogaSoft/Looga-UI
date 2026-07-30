@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
-    [AddComponentMenu("LoogaSoft/UI FX/Shapes/Looga UI Circle")]
+    [AddComponentMenu("LoogaSoft/UI/Shapes/Looga UI Circle")]
     public sealed class LoogaUICircle : LoogaUIShapeGraphic
     {
         [Header("Circle")]

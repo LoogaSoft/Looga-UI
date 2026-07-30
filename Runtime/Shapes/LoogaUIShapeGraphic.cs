@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
     public abstract class LoogaUIShapeGraphic : MaskableGraphic

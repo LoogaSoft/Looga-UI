@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Graphic))]
-    [AddComponentMenu("LoogaSoft/UI FX/Looga UI Gradient Overlay")]
+    [AddComponentMenu("LoogaSoft/UI/Looga UI Gradient Overlay")]
     public sealed class LoogaUIGradientOverlay : UIBehaviour, IMaterialModifier
     {
         [Header("Gradient")]
@@ -41,10 +41,10 @@ namespace LoogaSoft.UIFX
             {
                 ReleaseReplacement();
                 _original = baseMaterial;
-                Shader shader = Shader.Find("Hidden/LoogaSoft/UI FX/Styled UI");
+                Shader shader = Shader.Find("Hidden/LoogaSoft/UI/Styled UI");
                 if (shader == null)
                 {
-                    Debug.LogWarning("Looga UI FX styled UI shader could not be found.", this);
+                    Debug.LogWarning("Looga UI styled UI shader could not be found.", this);
                     return baseMaterial;
                 }
 

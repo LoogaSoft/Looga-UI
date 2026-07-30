@@ -1,4 +1,4 @@
-Shader "Hidden/LoogaSoft/UI FX/Soft Masked UI"
+Shader "Hidden/LoogaSoft/UI/Soft Masked UI"
 {
     Properties
     {

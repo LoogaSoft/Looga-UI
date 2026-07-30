@@ -1,5 +1,5 @@
-﻿using System;
-#if LOOGA_UIFX_UNITASK_SUPPORT
+using System;
+#if LOOGA_UI_UNITASK_SUPPORT
 using System.Threading;
 using Cysharp.Threading.Tasks;
 #endif
@@ -7,12 +7,12 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Graphic))]
-    [AddComponentMenu("LoogaSoft/UI FX/Looga UI Shadow")]
+    [AddComponentMenu("LoogaSoft/UI/Looga UI Shadow")]
     public sealed class LoogaUIShadow : MonoBehaviour
     {
         const string ShadowObjectName = "Looga UI Shadow Renderer";
@@ -36,7 +36,7 @@ namespace LoogaSoft.UIFX
         bool _dither = true;
         [SerializeField, Tooltip("Releases the generated texture when disabled. Turn this off only for frequently toggled UI that should keep its cached shadow texture.")]
         bool _deallocateOnDisable = true;
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
         bool _useAsyncRebuild = true;
 #endif
@@ -54,7 +54,7 @@ namespace LoogaSoft.UIFX
         float _lastPadding;
         bool _dirty = true;
         bool _warnedUnreadableTexture;
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
         CancellationTokenSource _rebuildCancellation;
         bool _asyncRebuildInProgress;
         int _rebuildVersion;
@@ -178,7 +178,7 @@ namespace LoogaSoft.UIFX
         {
             UnregisterGraphicCallbacks();
             UnregisterCanvasCallbacks();
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
             CancelAsyncRebuild();
 #endif
 
@@ -197,7 +197,7 @@ namespace LoogaSoft.UIFX
         {
             UnregisterGraphicCallbacks();
             UnregisterCanvasCallbacks();
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
             CancelAsyncRebuild();
 #endif
             ReleaseGeneratedTexture();
@@ -239,7 +239,7 @@ namespace LoogaSoft.UIFX
 
             if (_dirty)
             {
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
                 if (_useAsyncRebuild)
                 {
                     StartAsyncRebuild();
@@ -432,7 +432,7 @@ namespace LoogaSoft.UIFX
             _shadowImage.color = Color.white;
         }
 
-#if LOOGA_UIFX_UNITASK_SUPPORT
+#if LOOGA_UI_UNITASK_SUPPORT
         void StartAsyncRebuild()
         {
             if (_asyncRebuildInProgress || !TryCreateBuildRequest(out ShadowBuildRequest request))

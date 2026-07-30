@@ -1,10 +1,10 @@
-﻿# Looga UI FX
+# Looga UI
 
-Looga UI FX contains reusable UGUI visual effects for LoogaSoft projects.
+Looga UI contains reusable UGUI effects and procedural graphics for LoogaSoft projects.
 
 ## Procedural UI Shapes
 
-Looga UI FX includes mesh-based UGUI shape graphics for authoring common UI primitives without baking sprite assets.
+Looga UI includes mesh-based UGUI shape graphics for authoring common UI primitives without baking sprite assets.
 All shape components inherit normal Unity UI behavior through `MaskableGraphic`, so they can live under canvases, be tinted, raycasted, masked, and animated like other UI graphics.
 
 ### Components
@@ -16,7 +16,7 @@ All shape components inherit normal Unity UI behavior through `MaskableGraphic`,
 
 ### Recommended Usage
 
-1. Add the desired component from `LoogaSoft/UI FX/Shapes`.
+1. Add the desired component from `LoogaSoft/UI/Shapes`.
 2. Size the object with its `RectTransform`.
 3. Use normalized point lists for custom shapes and line paths. `(-0.5, -0.5)` maps to bottom-left and `(0.5, 0.5)` maps to top-right.
 4. Select custom shapes or line renderers in the Scene view to drag existing points. Green midpoint handles insert new points between existing ones.
@@ -47,7 +47,7 @@ The first implementation targets sprite-backed UGUI graphics. Source sprite alph
 
 ### Optional UniTask Support
 
-Use `LoogaSoft > UI FX > Enable UniTask Support` after installing UniTask. When enabled, `LoogaUIShadow` exposes an async rebuild option that snapshots Unity object data on the main thread, builds the expensive blur pixels on UniTask's thread pool, and applies the generated texture back on the main thread.
+Use `LoogaSoft > UI > Enable UniTask Support` after installing UniTask. When enabled, `LoogaUIShadow` exposes an async rebuild option that snapshots Unity object data on the main thread, builds the expensive blur pixels on UniTask's thread pool, and applies the generated texture back on the main thread.
 
 ## UI Soft Mask
 

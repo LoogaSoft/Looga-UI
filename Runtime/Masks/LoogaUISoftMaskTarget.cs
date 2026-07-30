@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
-    [AddComponentMenu("LoogaSoft/UI FX/Looga UI Soft Mask Target")]
+    [AddComponentMenu("LoogaSoft/UI/Looga UI Soft Mask Target")]
     [RequireComponent(typeof(Graphic))]
     public sealed class LoogaUISoftMaskTarget : UIBehaviour, IMaterialModifier
     {
@@ -144,7 +144,7 @@ namespace LoogaSoft.UIFX
             Shader shader = DefaultShader;
             if (shader == null)
             {
-                Debug.LogWarning("Looga UI FX soft mask shader could not be found.", this);
+                Debug.LogWarning("Looga UI soft mask shader could not be found.", this);
                 return null;
             }
 
@@ -158,7 +158,7 @@ namespace LoogaSoft.UIFX
 
         Shader DefaultShader => _defaultShader != null
             ? _defaultShader
-            : (_defaultShader = Shader.Find("Hidden/LoogaSoft/UI FX/Soft Masked UI"));
+            : (_defaultShader = Shader.Find("Hidden/LoogaSoft/UI/Soft Masked UI"));
 
         void ApplyMaskParameters(Material material)
         {

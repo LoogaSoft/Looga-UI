@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX.Editor
+namespace LoogaSoft.UI.Extensions.Editor
 {
     [CustomEditor(typeof(LoogaUIPolygon))]
     sealed class LoogaUIPolygonEditor : UnityEditor.Editor

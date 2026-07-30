@@ -1,4 +1,4 @@
-Shader "Hidden/LoogaSoft/UI FX/Outlined UI"
+Shader "Hidden/LoogaSoft/UI/Outlined UI"
 {
     Properties
     {

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     static class LoogaUIShineShaderIds
     {

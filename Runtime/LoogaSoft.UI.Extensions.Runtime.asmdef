@@ -1,12 +1,10 @@
 {
-  "name": "LoogaSoft.UIFX.Editor",
-  "rootNamespace": "LoogaSoft.UIFX.Editor",
+  "name": "LoogaSoft.UI.Extensions.Runtime",
+  "rootNamespace": "LoogaSoft.UI",
   "references": [
-    "LoogaSoft.UIFX.Runtime"
+    "UnityEngine.UI"
   ],
-  "includePlatforms": [
-    "Editor"
-  ],
+  "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,

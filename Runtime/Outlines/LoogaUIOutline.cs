@@ -1,14 +1,14 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Graphic))]
-    [AddComponentMenu("LoogaSoft/UI FX/Looga UI Outline")]
+    [AddComponentMenu("LoogaSoft/UI/Looga UI Outline")]
     public sealed class LoogaUIOutline : BaseMeshEffect, IMaterialModifier
     {
         static readonly List<UIVertex> VertexBuffer = new();
@@ -52,10 +52,10 @@ namespace LoogaSoft.UIFX
             {
                 ReleaseReplacement();
                 _original = baseMaterial;
-                Shader shader = Shader.Find("Hidden/LoogaSoft/UI FX/Outlined UI");
+                Shader shader = Shader.Find("Hidden/LoogaSoft/UI/Outlined UI");
                 if (shader == null)
                 {
-                    Debug.LogWarning("Looga UI FX outline shader could not be found.", this);
+                    Debug.LogWarning("Looga UI outline shader could not be found.", this);
                     return baseMaterial;
                 }
 

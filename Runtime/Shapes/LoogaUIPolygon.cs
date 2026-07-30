@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
-    [AddComponentMenu("LoogaSoft/UI FX/Shapes/Looga UI Polygon")]
+    [AddComponentMenu("LoogaSoft/UI/Shapes/Looga UI Polygon")]
     public sealed class LoogaUIPolygon : LoogaUIShapeGraphic
     {
         static readonly List<Vector2> Points = new();

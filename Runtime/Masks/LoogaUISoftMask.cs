@@ -1,15 +1,15 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Sprites;
 using UnityEngine.UI;
 
-namespace LoogaSoft.UIFX
+namespace LoogaSoft.UI.Extensions
 {
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(RectTransform))]
-    [AddComponentMenu("LoogaSoft/UI FX/Looga UI Soft Mask")]
+    [AddComponentMenu("LoogaSoft/UI/Looga UI Soft Mask")]
     public sealed class LoogaUISoftMask : UIBehaviour, ICanvasRaycastFilter
     {
         static readonly List<LoogaUISoftMaskTarget> TargetBuffer = new();
