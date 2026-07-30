@@ -32,7 +32,10 @@ namespace LoogaSoft.UIFX
         [FormerlySerializedAs("_clipOuterShadowBehindSource")]
         [SerializeField, Tooltip("Removes outer shadow pixels that would render behind the source graphic.")]
         bool _clipSource = true;
-        [SerializeField] bool _deallocateOnDisable = true;
+        [SerializeField, Tooltip("Applies subtle ordered dithering when writing generated alpha to reduce visible bands in soft shadows.")]
+        bool _dither = true;
+        [SerializeField, Tooltip("Releases the generated texture when disabled. Turn this off only for frequently toggled UI that should keep its cached shadow texture.")]
+        bool _deallocateOnDisable = true;
 #if LOOGA_UIFX_UNITASK_SUPPORT
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
         bool _useAsyncRebuild = true;
@@ -322,6 +325,7 @@ namespace LoogaSoft.UIFX
                 hash = hash * 31 + _quality.GetHashCode();
                 hash = hash * 31 + _useSourceAlpha.GetHashCode();
                 hash = hash * 31 + _clipSource.GetHashCode();
+                hash = hash * 31 + _dither.GetHashCode();
                 return hash;
             }
         }
@@ -415,7 +419,7 @@ namespace LoogaSoft.UIFX
             int height = Mathf.Clamp(Mathf.CeilToInt((size.y + _lastPadding * 2f) * _resolutionScale), 1, MaxGeneratedSize);
             float[] sourceAlpha = new float[width * height];
             WriteSourceAlpha(sourceAlpha, width, height, size);
-            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha, _clipSource);
+            request = new ShadowBuildRequest(_mode, _color, _offset, _softness, _spread, _resolutionScale, GetBlurPasses(), width, height, sourceAlpha, _clipSource, _dither);
             return true;
         }
 
@@ -519,7 +523,7 @@ namespace LoogaSoft.UIFX
                         alpha *= 1f - SampleCoverage(originalAlpha, request.Width, request.Height, x + offsetX, y + offsetY);
                     }
 
-                    pixels[index] = new Color32(r, g, b, FloatToByte(alpha * alphaScale));
+                    pixels[index] = new Color32(r, g, b, FloatToByte(alpha * alphaScale, x, y, request.Dither));
                 }
             }
 
@@ -565,7 +569,7 @@ namespace LoogaSoft.UIFX
                     int sampleX = Mathf.Clamp(x - sampleOffsetX, 0, width - 1);
                     int sampleY = Mathf.Clamp(y - sampleOffsetY, 0, height - 1);
                     float alpha = insideAlpha[sourceIndex] * edgeAlpha[sampleY * width + sampleX] * alphaScale;
-                    pixels[sourceIndex] = new Color32(r, g, b, FloatToByte(alpha));
+                    pixels[sourceIndex] = new Color32(r, g, b, FloatToByte(alpha, x, y, request.Dither));
                 }
             }
 
@@ -896,6 +900,43 @@ namespace LoogaSoft.UIFX
             return (byte)Mathf.Clamp(Mathf.RoundToInt(value * 255f), 0, 255);
         }
 
+        static byte FloatToByte(float value, int x, int y, bool dither)
+        {
+            float byteValue = Mathf.Clamp01(value) * 255f;
+            if (dither)
+            {
+                byteValue += OrderedDitherThreshold(x, y);
+            }
+
+            return (byte)Mathf.Clamp(Mathf.RoundToInt(byteValue), 0, 255);
+        }
+
+        static float OrderedDitherThreshold(int x, int y)
+        {
+            int index = ((y & 3) << 2) | (x & 3);
+            int value = index switch
+            {
+                0 => 0,
+                1 => 8,
+                2 => 2,
+                3 => 10,
+                4 => 12,
+                5 => 4,
+                6 => 14,
+                7 => 6,
+                8 => 3,
+                9 => 11,
+                10 => 1,
+                11 => 9,
+                12 => 15,
+                13 => 7,
+                14 => 13,
+                _ => 5
+            };
+
+            return (value + 0.5f) / 16f - 0.5f;
+        }
+
         static Vector2 ResolveImageUv(Image image, float normalizedX, float normalizedY, Vector2 sourceSize)
         {
             return image.type switch
@@ -1210,7 +1251,8 @@ namespace LoogaSoft.UIFX
                 int width,
                 int height,
                 float[] sourceAlpha,
-                bool clipSource)
+                bool clipSource,
+                bool dither)
             {
                 Mode = mode;
                 Color = color;
@@ -1223,6 +1265,7 @@ namespace LoogaSoft.UIFX
                 Height = height;
                 SourceAlpha = sourceAlpha;
                 ClipSource = clipSource;
+                Dither = dither;
             }
 
             public readonly LoogaUIShadowMode Mode;
@@ -1236,6 +1279,7 @@ namespace LoogaSoft.UIFX
             public readonly int Height;
             public readonly float[] SourceAlpha;
             public readonly bool ClipSource;
+            public readonly bool Dither;
         }
     }
 }

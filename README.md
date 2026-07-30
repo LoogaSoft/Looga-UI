@@ -38,10 +38,12 @@ The effect can be used as an outer shadow/glow or an inner shadow/glow by changi
 4. For inner effects, `Offset` biases where the inward edge appears instead of moving the renderer.
 5. Keep `Resolution Scale` below `1` for large/soft shadows unless the shape needs extra precision.
 6. Leave `Clip Source` enabled when transparent sprites should not be darkened by their own shadow.
+7. Leave `Dither` enabled for wide soft shadows to reduce visible alpha banding.
 
 ### Notes
 
 The first implementation targets sprite-backed UGUI graphics. Source sprite alpha is read directly when possible, then via a temporary render texture fallback for non-readable textures. If both paths fail, the component falls back to a rectangular alpha mask and logs a warning once per rebuild path.
+`Deallocate On Disable` should usually stay enabled. Disable it only for UI that is hidden and shown frequently enough that keeping the generated texture cached is worth the extra memory.
 
 ### Optional UniTask Support
 
