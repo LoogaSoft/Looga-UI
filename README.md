@@ -1,6 +1,59 @@
 # Looga UI
 
-Looga UI contains reusable UGUI effects and procedural graphics for LoogaSoft projects.
+Looga UI contains reusable UGUI layout tools, effects, and procedural graphics for LoogaSoft projects.
+
+## Layout
+
+The layout system replaces common chains of Unity layout groups, layout elements, and content-size fitters with three focused components. It uses Unity's normal `ILayoutElement` and layout rebuild contracts, so nested layouts propagate size changes upward without polling or per-frame reactive subscriptions.
+
+### Components
+
+- `LoogaLayout` arranges children and optionally sizes its own RectTransform. Its mode can be Horizontal, Vertical, Grid, Flow, or Overlay.
+- `LoogaLayoutElement` supplies per-child minimum, preferred, maximum, flexible, and ignore-layout overrides.
+- `LoogaContentFitter` sizes a leaf or wrapper from itself, its first child, or an explicitly assigned RectTransform. Containers normally do not need it because `LoogaLayout` already measures and reports its content.
+
+### Nested Content-Sized Buttons
+
+For a text-sized button:
+
+1. Add `LoogaLayout` to the button.
+2. Use Horizontal mode, add the desired padding, and set Width and Height to Content.
+3. Leave the text child on its normal preferred size. TextMeshPro and Unity text components already report layout metrics.
+
+For a navigation row containing those buttons:
+
+1. Add another `LoogaLayout` to the row.
+2. Use Horizontal mode and Content width if the row should wrap tightly around its buttons.
+3. Use Authored, Fill Parent, or Clamped Content width when the row must respect a larger screen region.
+
+Text changes mark Unity's layout chain dirty. The button recalculates from the text, the row recalculates from the buttons, and higher parents receive the new preferred size during the same layout rebuild.
+
+### Sizing Modes
+
+Container axes support:
+
+- `Authored`: preserve the RectTransform's authored size.
+- `Content`: use the children's reported size.
+- `Fill Parent`: request available space from the parent layout.
+- `Fixed`: use the configured dimension.
+- `Clamped Content`: fit content between configured minimum and maximum dimensions.
+
+Child axes support:
+
+- `Content`: use each child's preferred size.
+- `Fill`: distribute available space, respecting child minimums, maximums, and flexible weights.
+- `Uniform`: use the largest preferred child size for every child.
+- `Fixed`: use the configured child dimension, still respecting child minimums and maximums.
+
+Grid uses its own fixed or largest-content cell sizing. Flow wraps children into rows according to the container's available width.
+
+### Guidance
+
+- Use `LoogaLayout` on containers instead of combining a Unity layout group with `ContentSizeFitter`.
+- Use `LoogaContentFitter` for leaf graphics or wrappers that must mirror one source, not for normal layout containers.
+- Avoid making an axis Content-sized while its children Fill that same axis. The custom inspector warns about this sizing cycle.
+- Add `LoogaLayoutElement` only when a child needs limits, flexible weight, explicit sizing, or exclusion from its parent layout.
+- Core layout has no `Update`, LINQ, or R3 dependency. Reusable buffers keep steady-state rebuilds allocation-conscious.
 
 ## Procedural UI Shapes
 
