@@ -27,10 +27,10 @@ namespace LoogaSoft.UI.Extensions
         [SerializeField, Tooltip("Largest dimensions produced by Clamped Content sizing. Zero means unlimited.")]
         Vector2 _maximumSize;
 
-        [SerializeField, Tooltip("How child widths are chosen.")]
+        [SerializeField, Tooltip("How child widths are chosen. Authored preserves each child's RectTransform width.")]
         LoogaLayoutChildSizeMode _childWidth = LoogaLayoutChildSizeMode.Content;
 
-        [SerializeField, Tooltip("How child heights are chosen.")]
+        [SerializeField, Tooltip("How child heights are chosen. Authored preserves each child's RectTransform height.")]
         LoogaLayoutChildSizeMode _childHeight = LoogaLayoutChildSizeMode.Content;
 
         [SerializeField, Tooltip("Width and height assigned when the matching child size mode is Fixed.")]
@@ -455,7 +455,7 @@ namespace LoogaSoft.UI.Extensions
                 {
                     RectTransform child = rectChildren[_orderedIndices[i]];
                     float size = _childSizes[i];
-                    SetChildAlongAxis(child, axis, position, size);
+                    PlaceChildAlongAxis(child, axis, position, size, sizeMode);
                     position += size + _spacing;
                 }
 
@@ -468,7 +468,7 @@ namespace LoogaSoft.UI.Extensions
                 RectTransform child = rectChildren[_orderedIndices[i]];
                 float size = _childSizes[i];
                 float position = AxisPaddingStart(axis) + Mathf.Max(0f, available - size) * alignment;
-                SetChildAlongAxis(child, axis, position, size);
+                PlaceChildAlongAxis(child, axis, position, size, sizeMode);
             }
         }
 
@@ -526,8 +526,8 @@ namespace LoogaSoft.UI.Extensions
                     float height = _flowChildHeights[orderedIndex];
                     float childY = y + Mathf.Max(0f, rowHeight - height) * Alignment(1);
 
-                    SetChildAlongAxis(child, 0, x, width);
-                    SetChildAlongAxis(child, 1, childY, height);
+                    PlaceChildAlongAxis(child, 0, x, width, _childWidth);
+                    PlaceChildAlongAxis(child, 1, childY, height, _childHeight);
                     x += width + _spacing;
                 }
 
@@ -554,9 +554,29 @@ namespace LoogaSoft.UI.Extensions
                 float x = padding.left + Mathf.Max(0f, availableWidth - width) * Alignment(0);
                 float y = padding.top + Mathf.Max(0f, availableHeight - height) * Alignment(1);
 
-                SetChildAlongAxis(child, 0, x, width);
-                SetChildAlongAxis(child, 1, y, height);
+                PlaceChildAlongAxis(child, 0, x, width, _childWidth);
+                PlaceChildAlongAxis(child, 1, y, height, _childHeight);
             }
+        }
+
+        void PlaceChildAlongAxis(
+            RectTransform child,
+            int axis,
+            float position,
+            float size,
+            LoogaLayoutChildSizeMode mode)
+        {
+            if (mode != LoogaLayoutChildSizeMode.Authored)
+            {
+                SetChildAlongAxis(child, axis, position, size);
+                return;
+            }
+
+            // The layout still owns ordering and position, but the child owns this
+            // dimension. Preserve its current authored size while normalizing the
+            // anchors used by Unity's layout system.
+            SetChildAlongAxis(child, axis, position);
+            child.SetSizeWithCurrentAnchors((RectTransform.Axis)axis, size);
         }
 
         void BuildChildSizes(int axis, LoogaLayoutChildSizeMode mode, float available)
@@ -581,6 +601,15 @@ namespace LoogaSoft.UI.Extensions
 
             switch (mode)
             {
+                case LoogaLayoutChildSizeMode.Authored:
+                    for (int i = 0; i < _orderedIndices.Count; i++)
+                    {
+                        RectTransform child = rectChildren[_orderedIndices[i]];
+                        _childSizes.Add(Mathf.Max(0f, child.rect.size[axis]));
+                    }
+
+                    return;
+
                 case LoogaLayoutChildSizeMode.Fixed:
                     for (int i = 0; i < _orderedIndices.Count; i++)
                     {
@@ -854,6 +883,7 @@ namespace LoogaSoft.UI.Extensions
             ReadChildMetrics(child, axis, out float minimum, out float preferred, out _);
             float size = mode switch
             {
+                LoogaLayoutChildSizeMode.Authored => child.rect.size[axis],
                 LoogaLayoutChildSizeMode.Fill => available,
                 LoogaLayoutChildSizeMode.Fixed => _fixedChildSize[axis],
                 LoogaLayoutChildSizeMode.Uniform => uniform,
@@ -903,6 +933,12 @@ namespace LoogaSoft.UI.Extensions
 
             switch (mode)
             {
+                case LoogaLayoutChildSizeMode.Authored:
+                    minimum = Mathf.Max(0f, child.rect.size[axis]);
+                    preferred = minimum;
+                    flexible = 0f;
+                    break;
+
                 case LoogaLayoutChildSizeMode.Fixed:
                     minimum = Mathf.Clamp(_fixedChildSize[axis], minimum, maximum);
                     preferred = minimum;

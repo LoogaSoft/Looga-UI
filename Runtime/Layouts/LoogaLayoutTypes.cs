@@ -23,7 +23,8 @@ namespace LoogaSoft.UI.Extensions
         Content,
         Fill,
         Uniform,
-        Fixed
+        Fixed,
+        Authored
     }
 
     public enum LoogaGridConstraint
