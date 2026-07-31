@@ -634,8 +634,10 @@ namespace LoogaSoft.UI.Extensions
             for (int i = 0; i < _orderedIndices.Count; i++)
             {
                 RectTransform child = rectChildren[_orderedIndices[i]];
-                ReadChildMetrics(child, axis, out float minimum, out _, out _);
-                _childSizes.Add(Mathf.Clamp(available, minimum, ChildMaximum(child, axis)));
+                _childSizes.Add(Mathf.Clamp(
+                    available,
+                    ChildMinimum(child, axis),
+                    ChildMaximum(child, axis)));
             }
         }
 
@@ -914,7 +916,10 @@ namespace LoogaSoft.UI.Extensions
                     break;
 
                 case LoogaLayoutChildSizeMode.Fill:
-                    preferred = Mathf.Clamp(preferred, minimum, maximum);
+                    // Fill is parent-owned. A previously driven RectTransform size
+                    // must not become a minimum or nested layouts can never shrink.
+                    minimum = ChildMinimum(child, axis);
+                    preferred = minimum;
                     flexible = Mathf.Max(1f, flexible);
                     break;
 
@@ -924,6 +929,17 @@ namespace LoogaSoft.UI.Extensions
                     flexible = Mathf.Max(0f, flexible);
                     break;
             }
+        }
+
+        static float ChildMinimum(RectTransform child, int axis)
+        {
+            if (!child.TryGetComponent(out LoogaLayoutElement element))
+            {
+                return 0f;
+            }
+
+            float minimum = axis == 0 ? element.minWidth : element.minHeight;
+            return Mathf.Max(0f, minimum);
         }
 
         static float ChildMaximum(RectTransform child, int axis)
