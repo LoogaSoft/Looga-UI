@@ -5,6 +5,7 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Extensions.Editor
 {
     [CustomEditor(typeof(LoogaLayout))]
+    [CanEditMultipleObjects]
     sealed class LoogaLayoutEditor : UnityEditor.Editor
     {
         SerializedProperty _mode;
@@ -63,8 +64,12 @@ namespace LoogaSoft.UI.Extensions.Editor
             EditorGUILayout.PropertyField(_padding);
             EditorGUILayout.PropertyField(_childAlignment, new GUIContent("Alignment"));
 
+            bool hasCommonMode = !_mode.hasMultipleDifferentValues;
             LoogaLayoutMode mode = (LoogaLayoutMode)_mode.enumValueIndex;
-            DrawArrangement(mode);
+            if (hasCommonMode)
+            {
+                DrawArrangement(mode);
+            }
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Container Sizing", EditorStyles.boldLabel);
@@ -72,7 +77,7 @@ namespace LoogaSoft.UI.Extensions.Editor
             EditorGUILayout.PropertyField(_height);
             DrawContainerSizeFields();
 
-            if (mode != LoogaLayoutMode.Grid)
+            if (hasCommonMode && mode != LoogaLayoutMode.Grid)
             {
                 EditorGUILayout.Space(4f);
                 EditorGUILayout.LabelField("Child Sizing", EditorStyles.boldLabel);
@@ -87,7 +92,7 @@ namespace LoogaSoft.UI.Extensions.Editor
 
             serializedObject.ApplyModifiedProperties();
 
-            DrawValidation(mode);
+            DrawValidation(hasCommonMode, mode);
             DrawDiagnostics();
         }
 
@@ -133,6 +138,11 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         void DrawContainerSizeFields()
         {
+            if (_width.hasMultipleDifferentValues || _height.hasMultipleDifferentValues)
+            {
+                return;
+            }
+
             LoogaLayoutSizeMode width = (LoogaLayoutSizeMode)_width.enumValueIndex;
             LoogaLayoutSizeMode height = (LoogaLayoutSizeMode)_height.enumValueIndex;
 
@@ -148,30 +158,44 @@ namespace LoogaSoft.UI.Extensions.Editor
             }
         }
 
-        void DrawValidation(LoogaLayoutMode mode)
+        void DrawValidation(bool hasCommonMode, LoogaLayoutMode mode)
         {
-            LoogaLayout layout = (LoogaLayout)target;
+            bool hasContentSizeFitter = false;
+            bool hasOtherLayoutGroup = false;
+            foreach (Object inspectedTarget in targets)
+            {
+                LoogaLayout layout = (LoogaLayout)inspectedTarget;
+                hasContentSizeFitter |= layout.TryGetComponent(out ContentSizeFitter _);
+                hasOtherLayoutGroup |= layout.TryGetComponent(out HorizontalOrVerticalLayoutGroup _)
+                    || layout.TryGetComponent(out GridLayoutGroup _);
+            }
 
-            if (layout.TryGetComponent(out ContentSizeFitter _))
+            if (hasContentSizeFitter)
             {
                 EditorGUILayout.HelpBox(
                     "Remove Content Size Fitter. Looga Layout already measures its children and can size this container.",
                     MessageType.Error);
             }
 
-            if (layout.TryGetComponent(out HorizontalOrVerticalLayoutGroup _)
-                || layout.TryGetComponent(out GridLayoutGroup _))
+            if (hasOtherLayoutGroup)
             {
                 EditorGUILayout.HelpBox(
                     "Another layout group is controlling the same children. Keep only one layout controller on this object.",
                     MessageType.Error);
             }
 
+            if (_width.hasMultipleDifferentValues
+                || _height.hasMultipleDifferentValues
+                || _childWidth.hasMultipleDifferentValues
+                || _childHeight.hasMultipleDifferentValues)
+            {
+                return;
+            }
+
             LoogaLayoutSizeMode width = (LoogaLayoutSizeMode)_width.enumValueIndex;
             LoogaLayoutSizeMode height = (LoogaLayoutSizeMode)_height.enumValueIndex;
             LoogaLayoutChildSizeMode childWidth = (LoogaLayoutChildSizeMode)_childWidth.enumValueIndex;
             LoogaLayoutChildSizeMode childHeight = (LoogaLayoutChildSizeMode)_childHeight.enumValueIndex;
-
             if (SizesToContent(width) && childWidth == LoogaLayoutChildSizeMode.Fill)
             {
                 EditorGUILayout.HelpBox(
@@ -186,7 +210,8 @@ namespace LoogaSoft.UI.Extensions.Editor
                     MessageType.Warning);
             }
 
-            if (mode == LoogaLayoutMode.Grid
+            if (hasCommonMode
+                && mode == LoogaLayoutMode.Grid
                 && (LoogaGridConstraint)_gridConstraint.enumValueIndex == LoogaGridConstraint.Flexible
                 && SizesToContent(width))
             {
@@ -195,7 +220,7 @@ namespace LoogaSoft.UI.Extensions.Editor
                     MessageType.Warning);
             }
 
-            if (mode == LoogaLayoutMode.Flow && SizesToContent(width))
+            if (hasCommonMode && mode == LoogaLayoutMode.Flow && SizesToContent(width))
             {
                 EditorGUILayout.HelpBox(
                     "A Flow layout with content-sized width naturally becomes one unwrapped row. Use Authored, Fill Parent, or Clamped Content width to wrap.",
@@ -205,6 +230,11 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         void DrawDiagnostics()
         {
+            if (targets.Length > 1)
+            {
+                return;
+            }
+
             _showDiagnostics = EditorGUILayout.Foldout(_showDiagnostics, "Calculated Size", true);
             if (!_showDiagnostics)
             {

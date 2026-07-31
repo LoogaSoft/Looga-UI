@@ -5,6 +5,7 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Extensions.Editor
 {
     [CustomEditor(typeof(LoogaLayoutElement))]
+    [CanEditMultipleObjects]
     sealed class LoogaLayoutElementEditor : UnityEditor.Editor
     {
         SerializedProperty _ignoreLayout;
@@ -54,7 +55,8 @@ namespace LoogaSoft.UI.Extensions.Editor
             DrawScript();
             EditorGUILayout.PropertyField(_ignoreLayout);
 
-            using (new EditorGUI.DisabledScope(_ignoreLayout.boolValue))
+            bool constraintsDisabled = !_ignoreLayout.hasMultipleDifferentValues && _ignoreLayout.boolValue;
+            using (new EditorGUI.DisabledScope(constraintsDisabled))
             {
                 EditorGUILayout.Space(4f);
                 EditorGUILayout.LabelField("Width", EditorStyles.boldLabel);
@@ -85,9 +87,21 @@ namespace LoogaSoft.UI.Extensions.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                enabled.boolValue = EditorGUILayout.ToggleLeft(label, enabled.boolValue, GUILayout.Width(EditorGUIUtility.labelWidth));
+                EditorGUI.showMixedValue = enabled.hasMultipleDifferentValues;
+                EditorGUI.BeginChangeCheck();
+                bool newValue = EditorGUILayout.ToggleLeft(
+                    label,
+                    enabled.boolValue,
+                    GUILayout.Width(EditorGUIUtility.labelWidth));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    enabled.boolValue = newValue;
+                }
 
-                using (new EditorGUI.DisabledScope(!enabled.boolValue))
+                EditorGUI.showMixedValue = false;
+
+                bool valueDisabled = !enabled.hasMultipleDifferentValues && !enabled.boolValue;
+                using (new EditorGUI.DisabledScope(valueDisabled))
                 {
                     EditorGUILayout.PropertyField(value, GUIContent.none);
                 }
@@ -96,12 +110,16 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         void DrawValidation()
         {
-            LoogaLayoutElement element = (LoogaLayoutElement)target;
-            if (element.TryGetComponent(out LayoutElement _))
+            foreach (Object inspectedTarget in targets)
             {
-                EditorGUILayout.HelpBox(
-                    "Unity Layout Element is also present. Remove one component so layout priorities and overrides remain unambiguous.",
-                    MessageType.Warning);
+                LoogaLayoutElement element = (LoogaLayoutElement)inspectedTarget;
+                if (element.TryGetComponent(out LayoutElement _))
+                {
+                    EditorGUILayout.HelpBox(
+                        "Unity Layout Element is also present on one or more selected objects. Remove one component so layout priorities and overrides remain unambiguous.",
+                        MessageType.Warning);
+                    return;
+                }
             }
         }
 

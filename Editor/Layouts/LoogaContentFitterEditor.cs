@@ -5,6 +5,7 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Extensions.Editor
 {
     [CustomEditor(typeof(LoogaContentFitter))]
+    [CanEditMultipleObjects]
     sealed class LoogaContentFitterEditor : UnityEditor.Editor
     {
         SerializedProperty _contentSource;
@@ -35,7 +36,8 @@ namespace LoogaSoft.UI.Extensions.Editor
             EditorGUILayout.LabelField("Content", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(_contentSource);
 
-            if ((LoogaContentSource)_contentSource.enumValueIndex == LoogaContentSource.Assigned)
+            if (_contentSource.hasMultipleDifferentValues
+                || (LoogaContentSource)_contentSource.enumValueIndex == LoogaContentSource.Assigned)
             {
                 EditorGUILayout.PropertyField(_assignedContent);
             }
@@ -59,23 +61,31 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         void DrawValidation()
         {
-            LoogaContentFitter fitter = (LoogaContentFitter)target;
+            bool hasContentSizeFitter = false;
+            bool hasLoogaLayout = false;
+            foreach (Object inspectedTarget in targets)
+            {
+                LoogaContentFitter fitter = (LoogaContentFitter)inspectedTarget;
+                hasContentSizeFitter |= fitter.TryGetComponent(out ContentSizeFitter _);
+                hasLoogaLayout |= fitter.TryGetComponent(out LoogaLayout _);
+            }
 
-            if (fitter.TryGetComponent(out ContentSizeFitter _))
+            if (hasContentSizeFitter)
             {
                 EditorGUILayout.HelpBox(
-                    "Remove Unity Content Size Fitter. Both components would attempt to size the same RectTransform.",
+                    "Remove Unity Content Size Fitter from the selected objects. Both components would attempt to size the same RectTransform.",
                     MessageType.Error);
             }
 
-            if (fitter.TryGetComponent(out LoogaLayout _))
+            if (hasLoogaLayout)
             {
                 EditorGUILayout.HelpBox(
-                    "Looga Layout already supports content sizing. A separate Looga Content Fitter is unnecessary here.",
+                    "Looga Layout already supports content sizing. A separate Looga Content Fitter is unnecessary on the selected objects.",
                     MessageType.Error);
             }
 
-            if ((LoogaContentSource)_contentSource.enumValueIndex == LoogaContentSource.Assigned
+            if (!_contentSource.hasMultipleDifferentValues
+                && (LoogaContentSource)_contentSource.enumValueIndex == LoogaContentSource.Assigned
                 && _assignedContent.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("Assign the RectTransform that provides this object's content size.", MessageType.Warning);
@@ -96,6 +106,11 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         bool UsesClamping()
         {
+            if (_width.hasMultipleDifferentValues || _height.hasMultipleDifferentValues)
+            {
+                return true;
+            }
+
             return (LoogaContentFitMode)_width.enumValueIndex == LoogaContentFitMode.ClampedPreferred
                 || (LoogaContentFitMode)_height.enumValueIndex == LoogaContentFitMode.ClampedPreferred;
         }
