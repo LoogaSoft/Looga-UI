@@ -85,6 +85,10 @@ namespace LoogaSoft.UI.Extensions
         public Vector2 ReportedMinimum => _reportedMinimum;
         public Vector2 ReportedPreferred => _reportedPreferred;
 
+        // Explicit layout policy must outrank decorative UI components such as
+        // Image, whose native sprite dimensions are not the container's size.
+        public override int layoutPriority => 1;
+
         public override void CalculateLayoutInputHorizontal()
         {
             base.CalculateLayoutInputHorizontal();
@@ -430,7 +434,17 @@ namespace LoogaSoft.UI.Extensions
             float available = rectTransform.rect.size[axis] - (axis == 0 ? padding.horizontal : padding.vertical);
 
             PopulateOrder();
-            BuildChildSizes(axis, sizeMode, main ? available - _spacing * Mathf.Max(0, rectChildren.Count - 1) : available);
+            if (!main && sizeMode == LoogaLayoutChildSizeMode.Fill)
+            {
+                BuildCrossAxisFillSizes(axis, available);
+            }
+            else
+            {
+                BuildChildSizes(
+                    axis,
+                    sizeMode,
+                    main ? available - _spacing * Mathf.Max(0, rectChildren.Count - 1) : available);
+            }
 
             if (main)
             {
@@ -610,6 +624,18 @@ namespace LoogaSoft.UI.Extensions
                     _childSizes.AddRange(_childPreferreds);
                     ShrinkTowardMinimum(available);
                     return;
+            }
+        }
+
+        void BuildCrossAxisFillSizes(int axis, float available)
+        {
+            _childSizes.Clear();
+
+            for (int i = 0; i < _orderedIndices.Count; i++)
+            {
+                RectTransform child = rectChildren[_orderedIndices[i]];
+                ReadChildMetrics(child, axis, out float minimum, out _, out _);
+                _childSizes.Add(Mathf.Clamp(available, minimum, ChildMaximum(child, axis)));
             }
         }
 
