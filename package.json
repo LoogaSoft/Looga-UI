@@ -2,7 +2,7 @@
   "displayName": "Looga UI",
   "name": "com.loogasoft.loogaui",
   "description": "Reusable UGUI layouts, effects, procedural graphics, masking, and UI utilities for LoogaSoft projects.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "LoogaSoft"
   },

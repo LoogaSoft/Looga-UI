@@ -1,8 +1,5 @@
 using System;
-#if LOOGA_UI_UNITASK_SUPPORT
 using System.Threading;
-using Cysharp.Threading.Tasks;
-#endif
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
@@ -36,10 +33,8 @@ namespace LoogaSoft.UI.Extensions
         bool _dither = true;
         [SerializeField, Tooltip("Releases the generated texture when disabled. Turn this off only for frequently toggled UI that should keep its cached shadow texture.")]
         bool _deallocateOnDisable = true;
-#if LOOGA_UI_UNITASK_SUPPORT
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
         bool _useAsyncRebuild = true;
-#endif
 
         Graphic _graphic;
         RectTransform _rectTransform;
@@ -54,11 +49,9 @@ namespace LoogaSoft.UI.Extensions
         float _lastPadding;
         bool _dirty = true;
         bool _warnedUnreadableTexture;
-#if LOOGA_UI_UNITASK_SUPPORT
         CancellationTokenSource _rebuildCancellation;
         bool _asyncRebuildInProgress;
         int _rebuildVersion;
-#endif
 
         public LoogaUIShadowMode Mode
         {
@@ -178,9 +171,7 @@ namespace LoogaSoft.UI.Extensions
         {
             UnregisterGraphicCallbacks();
             UnregisterCanvasCallbacks();
-#if LOOGA_UI_UNITASK_SUPPORT
             CancelAsyncRebuild();
-#endif
 
             if (_shadowImage != null)
             {
@@ -197,9 +188,7 @@ namespace LoogaSoft.UI.Extensions
         {
             UnregisterGraphicCallbacks();
             UnregisterCanvasCallbacks();
-#if LOOGA_UI_UNITASK_SUPPORT
             CancelAsyncRebuild();
-#endif
             ReleaseGeneratedTexture();
 
             ReleaseRenderer();
@@ -239,13 +228,11 @@ namespace LoogaSoft.UI.Extensions
 
             if (_dirty)
             {
-#if LOOGA_UI_UNITASK_SUPPORT
-                if (_useAsyncRebuild)
+                if (_useAsyncRebuild && LoogaUIAsyncScheduler.IsAvailable)
                 {
                     StartAsyncRebuild();
                 }
                 else
-#endif
                 {
                     RebuildShadow();
                 }
@@ -432,7 +419,6 @@ namespace LoogaSoft.UI.Extensions
             _shadowImage.color = Color.white;
         }
 
-#if LOOGA_UI_UNITASK_SUPPORT
         void StartAsyncRebuild()
         {
             if (_asyncRebuildInProgress || !TryCreateBuildRequest(out ShadowBuildRequest request))
@@ -444,34 +430,53 @@ namespace LoogaSoft.UI.Extensions
             _rebuildCancellation?.Cancel();
             _rebuildCancellation?.Dispose();
             _rebuildCancellation = new CancellationTokenSource();
-            RebuildShadowAsync(request, ++_rebuildVersion, _rebuildCancellation.Token).Forget();
+            int version = ++_rebuildVersion;
+            CancellationToken cancellationToken = _rebuildCancellation.Token;
+
+            bool scheduled = LoogaUIAsyncScheduler.TrySchedule(
+                () => BuildShadowPixels(request),
+                cancellationToken,
+                (pixels, exception, cancelled) => CompleteAsyncRebuild(
+                    request,
+                    version,
+                    cancellationToken,
+                    pixels,
+                    exception,
+                    cancelled));
+
+            if (!scheduled)
+            {
+                _asyncRebuildInProgress = false;
+                RebuildShadow();
+            }
         }
 
-        async UniTaskVoid RebuildShadowAsync(ShadowBuildRequest request, int version, CancellationToken cancellationToken)
+        void CompleteAsyncRebuild(
+            ShadowBuildRequest request,
+            int version,
+            CancellationToken cancellationToken,
+            Color32[] pixels,
+            Exception exception,
+            bool cancelled)
         {
-            try
+            if (this == null || version != _rebuildVersion)
             {
-                Color32[] pixels = await UniTask.RunOnThreadPool(() => BuildShadowPixels(request), cancellationToken: cancellationToken);
-                await UniTask.SwitchToMainThread(cancellationToken);
+                return;
+            }
 
-                if (this == null || cancellationToken.IsCancellationRequested || version != _rebuildVersion)
-                {
-                    return;
-                }
+            _asyncRebuildInProgress = false;
+            if (cancelled || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
 
-                ApplyShadowTexture(request.Width, request.Height, pixels);
-            }
-            catch (OperationCanceledException)
+            if (exception != null)
             {
+                Debug.LogException(exception, this);
+                return;
             }
-            finally
-            {
-                await UniTask.SwitchToMainThread();
-                if (this != null && version == _rebuildVersion)
-                {
-                    _asyncRebuildInProgress = false;
-                }
-            }
+
+            ApplyShadowTexture(request.Width, request.Height, pixels);
         }
 
         void CancelAsyncRebuild()
@@ -482,7 +487,6 @@ namespace LoogaSoft.UI.Extensions
             _asyncRebuildInProgress = false;
             _rebuildVersion++;
         }
-#endif
 
         static Color32[] BuildShadowPixels(ShadowBuildRequest request)
         {

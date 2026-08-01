@@ -100,7 +100,11 @@ The first implementation targets sprite-backed UGUI graphics. Source sprite alph
 
 ### Optional UniTask Support
 
-Use `LoogaSoft > UI > Enable UniTask Support` after installing UniTask. When enabled, `LoogaUIShadow` exposes an async rebuild option that snapshots Unity object data on the main thread, builds the expensive blur pixels on UniTask's thread pool, and applies the generated texture back on the main thread.
+Install UniTask through Unity Package Manager, then use `LoogaSoft > UI > Enable UniTask Support`.
+Looga UI detects the package through a separate optional assembly, so this works for Git, registry,
+embedded, and local package installations without modifying Looga UI's cached `.asmdef` files.
+When enabled, `LoogaUIShadow` can snapshot Unity object data on the main thread, build expensive
+blur pixels on UniTask's thread pool, and apply the generated texture back on the main thread.
 
 ## UI Soft Mask
 

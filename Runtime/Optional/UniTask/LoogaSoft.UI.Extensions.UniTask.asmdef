@@ -1,0 +1,26 @@
+{
+  "name": "LoogaSoft.UI.Extensions.UniTask",
+  "rootNamespace": "LoogaSoft.UI.Extensions.UniTask",
+  "references": [
+    "LoogaSoft.UI.Extensions.Runtime",
+    "UniTask"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "LOOGA_UI_UNITASK_AVAILABLE",
+    "!LOOGA_UI_DISABLE_UNITASK_SUPPORT"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.cysharp.unitask",
+      "expression": "[2.0.0,3.0.0)",
+      "define": "LOOGA_UI_UNITASK_AVAILABLE"
+    }
+  ],
+  "noEngineReferences": false
+}

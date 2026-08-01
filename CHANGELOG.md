@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-07-31
+
+- Made optional UniTask support compatible with Git and immutable package installations.
+- Isolated UniTask references in version-gated optional assemblies.
+- Standardized optional-support messaging on the current package name.
+
 ## [1.1.0] - 2026-07-30
 
 ### Added

@@ -6,8 +6,7 @@ namespace LoogaSoft.UI.Extensions.Editor
     internal static class LoogaUIUniTaskSupportMenu
     {
         const string MenuPath = "LoogaSoft/UI/Enable UniTask Support";
-        const string DefineSymbol = "LOOGA_UI_UNITASK_SUPPORT";
-        const string RuntimeAsmdefName = "LoogaSoft.UI.Extensions.Runtime";
+        const string DisableDefineSymbol = "LOOGA_UI_DISABLE_UNITASK_SUPPORT";
 
         static readonly string[] RequiredAssemblies =
         {
@@ -41,31 +40,20 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         static bool IsEnabled()
         {
-            return LoogaUIOptionalSupportUtility.DefineIsEnabled(DefineSymbol);
+            return LoogaUIOptionalSupportUtility.AllAssembliesAreAvailable(RequiredAssemblies, out _) &&
+                   !LoogaUIOptionalSupportUtility.DefineIsEnabled(DisableDefineSymbol);
         }
 
         static void Enable()
         {
-            if (!LoogaUIOptionalSupportUtility.SetAsmdefReferences(RuntimeAsmdefName, RequiredAssemblies, include: true, out string error))
-            {
-                EditorUtility.DisplayDialog("Unable To Update UI FX", error, "OK");
-                return;
-            }
-
-            LoogaUIOptionalSupportUtility.AddDefineSymbol(DefineSymbol);
+            LoogaUIOptionalSupportUtility.RemoveDefineSymbol(DisableDefineSymbol);
             AssetDatabase.Refresh();
             Debug.Log("Looga UI UniTask support enabled.");
         }
 
         static void Disable()
         {
-            if (!LoogaUIOptionalSupportUtility.SetAsmdefReferences(RuntimeAsmdefName, RequiredAssemblies, include: false, out string error))
-            {
-                EditorUtility.DisplayDialog("Unable To Update UI FX", error, "OK");
-                return;
-            }
-
-            LoogaUIOptionalSupportUtility.RemoveDefineSymbol(DefineSymbol);
+            LoogaUIOptionalSupportUtility.AddDefineSymbol(DisableDefineSymbol);
             AssetDatabase.Refresh();
             Debug.Log("Looga UI UniTask support disabled.");
         }
