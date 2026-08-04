@@ -3,9 +3,8 @@ using UnityEngine;
 
 namespace LoogaSoft.UI.Extensions.Editor
 {
-    internal static class LoogaUIUniTaskSupportMenu
+    internal static class LoogaUIUniTaskSupportProvider
     {
-        const string MenuPath = "LoogaSoft/UI/Enable UniTask Support";
         const string DisableDefineSymbol = "LOOGA_UI_DISABLE_UNITASK_SUPPORT";
 
         static readonly string[] RequiredAssemblies =
@@ -13,35 +12,30 @@ namespace LoogaSoft.UI.Extensions.Editor
             "UniTask"
         };
 
-        [MenuItem(MenuPath, priority = 240)]
-        static void ToggleUniTaskSupport()
-        {
-            if (IsEnabled())
-            {
-                Disable();
-                return;
-            }
+        public static string ProviderId => "looga-ui.unitask";
+        public static string PackageName => "Looga UI";
+        public static string IntegrationName => "UniTask";
+        public static string Description => "Uses UniTask for asynchronous UI effects and scheduling.";
 
-            if (!LoogaUIOptionalSupportUtility.AllAssembliesAreAvailable(RequiredAssemblies, out string missingAssemblies))
-            {
-                EditorUtility.DisplayDialog("UniTask Not Found", "Install UniTask before enabling Looga UI UniTask support.\n\nMissing: " + missingAssemblies, "OK");
-                return;
-            }
-
-            Enable();
-        }
-
-        [MenuItem(MenuPath, true)]
-        static bool ValidateToggle()
-        {
-            UnityEditor.Menu.SetChecked(MenuPath, IsEnabled());
-            return true;
-        }
-
-        static bool IsEnabled()
+        public static bool IsEnabled()
         {
             return LoogaUIOptionalSupportUtility.AllAssembliesAreAvailable(RequiredAssemblies, out _) &&
                    !LoogaUIOptionalSupportUtility.DefineIsEnabled(DisableDefineSymbol);
+        }
+
+        public static string GetUnavailableReason()
+        {
+            return LoogaUIOptionalSupportUtility.AllAssembliesAreAvailable(RequiredAssemblies, out string missingAssemblies)
+                ? string.Empty
+                : "Install UniTask. Missing assemblies: " + missingAssemblies;
+        }
+
+        public static void SetEnabled(bool enabled)
+        {
+            if (enabled)
+                Enable();
+            else
+                Disable();
         }
 
         static void Enable()
