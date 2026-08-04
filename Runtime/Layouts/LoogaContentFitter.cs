@@ -5,36 +5,37 @@ using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Extensions
 {
+    /// <summary>Fits a RectTransform to measured content without requiring a layout group.</summary>
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("Looga UI/Layout/Looga Content Fitter")]
     public sealed class LoogaContentFitter : UIBehaviour, ILayoutElement, ILayoutSelfController
     {
         [SerializeField, Tooltip("Where the minimum and preferred size are measured from.")]
-        LoogaContentSource _contentSource = LoogaContentSource.Self;
+        private LoogaContentSource _contentSource = LoogaContentSource.Self;
 
         [SerializeField, Tooltip("Content measured when Content Source is Assigned.")]
-        RectTransform _assignedContent;
+        private RectTransform _assignedContent;
 
         [SerializeField, Tooltip("How this RectTransform's width responds to measured content.")]
-        LoogaContentFitMode _width = LoogaContentFitMode.Preferred;
+        private LoogaContentFitMode _width = LoogaContentFitMode.Preferred;
 
         [SerializeField, Tooltip("How this RectTransform's height responds to measured content.")]
-        LoogaContentFitMode _height = LoogaContentFitMode.Preferred;
+        private LoogaContentFitMode _height = LoogaContentFitMode.Preferred;
 
         [SerializeField, Min(0f), Tooltip("Smallest size produced by Clamped Preferred.")]
-        Vector2 _minimumSize;
+        private Vector2 _minimumSize;
 
         [SerializeField, Tooltip("Largest size produced by Clamped Preferred. Zero means unlimited.")]
-        Vector2 _maximumSize;
+        private Vector2 _maximumSize;
 
         [SerializeField, Tooltip("Higher-priority layout values override lower-priority values on the same object.")]
-        int _layoutPriority = 1;
+        private int _layoutPriority = 1;
 
-        readonly List<Component> _components = new();
-        DrivenRectTransformTracker _tracker;
-        Vector2 _measuredMinimum;
-        Vector2 _measuredPreferred;
+        private readonly List<Component> _components = new();
+        private DrivenRectTransformTracker _tracker;
+        private Vector2 _measuredMinimum;
+        private Vector2 _measuredPreferred;
 
         public float minWidth => ReportedSize(0, true);
         public float preferredWidth => ReportedSize(0, false);
@@ -84,7 +85,7 @@ namespace LoogaSoft.UI.Extensions
             SetDirty();
         }
 
-        void OnTransformChildrenChanged()
+        private void OnTransformChildrenChanged()
         {
             SetDirty();
         }
@@ -109,7 +110,7 @@ namespace LoogaSoft.UI.Extensions
         }
 #endif
 
-        void MeasureAxis(int axis)
+        private void MeasureAxis(int axis)
         {
             RectTransform source = ResolveSource();
             float minimum;
@@ -134,7 +135,7 @@ namespace LoogaSoft.UI.Extensions
             _measuredPreferred[axis] = Mathf.Max(_measuredMinimum[axis], preferred);
         }
 
-        void MeasureSelf(int axis, out float minimum, out float preferred)
+        private void MeasureSelf(int axis, out float minimum, out float preferred)
         {
             minimum = 0f;
             preferred = 0f;
@@ -168,7 +169,7 @@ namespace LoogaSoft.UI.Extensions
             preferred = Mathf.Max(minimum, preferred);
         }
 
-        void FitAxis(int axis)
+        private void FitAxis(int axis)
         {
             LoogaContentFitMode mode = axis == 0 ? _width : _height;
             if (mode == LoogaContentFitMode.Authored || ParentControlsRect())
@@ -194,7 +195,7 @@ namespace LoogaSoft.UI.Extensions
             (transform as RectTransform)?.SetSizeWithCurrentAnchors((RectTransform.Axis)axis, size);
         }
 
-        float ReportedSize(int axis, bool minimum)
+        private float ReportedSize(int axis, bool minimum)
         {
             LoogaContentFitMode mode = axis == 0 ? _width : _height;
             if (mode == LoogaContentFitMode.Authored)
@@ -216,7 +217,7 @@ namespace LoogaSoft.UI.Extensions
             return value;
         }
 
-        RectTransform ResolveSource()
+        private RectTransform ResolveSource()
         {
             return _contentSource switch
             {
@@ -226,7 +227,7 @@ namespace LoogaSoft.UI.Extensions
             };
         }
 
-        bool ParentControlsRect()
+        private bool ParentControlsRect()
         {
             _components.Clear();
             GetComponents(_components);
@@ -258,7 +259,7 @@ namespace LoogaSoft.UI.Extensions
             return false;
         }
 
-        void SetDirty()
+        private void SetDirty()
         {
             if (!IsActive())
             {

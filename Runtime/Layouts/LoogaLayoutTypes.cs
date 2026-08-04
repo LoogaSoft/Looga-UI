@@ -1,5 +1,6 @@
 namespace LoogaSoft.UI.Extensions
 {
+    /// <summary>Defines how a layout arranges its direct children.</summary>
     public enum LoogaLayoutMode
     {
         Horizontal,
@@ -9,6 +10,7 @@ namespace LoogaSoft.UI.Extensions
         Overlay
     }
 
+    /// <summary>Defines how a layout calculates its own size.</summary>
     public enum LoogaLayoutSizeMode
     {
         Authored,
@@ -18,6 +20,7 @@ namespace LoogaSoft.UI.Extensions
         ClampedContent
     }
 
+    /// <summary>Defines how a layout calculates each child size.</summary>
     public enum LoogaLayoutChildSizeMode
     {
         Content,
@@ -27,6 +30,7 @@ namespace LoogaSoft.UI.Extensions
         Authored
     }
 
+    /// <summary>Defines which grid dimension has a fixed item count.</summary>
     public enum LoogaGridConstraint
     {
         Flexible,
@@ -34,12 +38,14 @@ namespace LoogaSoft.UI.Extensions
         FixedRows
     }
 
+    /// <summary>Defines how a grid calculates its cell size.</summary>
     public enum LoogaGridCellMode
     {
         Fixed,
         LargestContent
     }
 
+    /// <summary>Defines the RectTransform that supplies content measurements.</summary>
     public enum LoogaContentSource
     {
         Self,
@@ -47,6 +53,7 @@ namespace LoogaSoft.UI.Extensions
         Assigned
     }
 
+    /// <summary>Defines how a fitter converts content measurements into size.</summary>
     public enum LoogaContentFitMode
     {
         Authored,

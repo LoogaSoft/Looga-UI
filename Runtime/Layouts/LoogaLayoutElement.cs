@@ -4,64 +4,65 @@ using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Extensions
 {
+    /// <summary>Overrides the size rules that a parent layout uses for one child.</summary>
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("Looga UI/Layout/Looga Layout Element")]
     public sealed class LoogaLayoutElement : UIBehaviour, ILayoutElement, ILayoutIgnorer
     {
         [SerializeField, Tooltip("Excludes this object from its parent layout.")]
-        bool _ignoreLayout;
+        private bool _ignoreLayout;
 
         [SerializeField, Tooltip("Overrides the minimum width reported to the parent layout.")]
-        bool _overrideMinWidth;
+        private bool _overrideMinWidth;
 
         [SerializeField, Min(0f)]
-        float _minWidth;
+        private float _minWidth;
 
         [SerializeField, Tooltip("Overrides the preferred width reported to the parent layout.")]
-        bool _overridePreferredWidth;
+        private bool _overridePreferredWidth;
 
         [SerializeField, Min(0f)]
-        float _preferredWidth = 100f;
+        private float _preferredWidth = 100f;
 
         [SerializeField, Tooltip("Caps the width assigned by Looga Layout. Unity layout groups do not consume maximum values.")]
-        bool _useMaxWidth;
+        private bool _useMaxWidth;
 
         [SerializeField, Min(0f)]
-        float _maxWidth = 1000f;
+        private float _maxWidth = 1000f;
 
         [SerializeField, Tooltip("Overrides how strongly this element grows into extra horizontal space.")]
-        bool _overrideFlexibleWidth;
+        private bool _overrideFlexibleWidth;
 
         [SerializeField, Min(0f)]
-        float _flexibleWidth;
+        private float _flexibleWidth;
 
         [SerializeField, Tooltip("Overrides the minimum height reported to the parent layout.")]
-        bool _overrideMinHeight;
+        private bool _overrideMinHeight;
 
         [SerializeField, Min(0f)]
-        float _minHeight;
+        private float _minHeight;
 
         [SerializeField, Tooltip("Overrides the preferred height reported to the parent layout.")]
-        bool _overridePreferredHeight;
+        private bool _overridePreferredHeight;
 
         [SerializeField, Min(0f)]
-        float _preferredHeight = 100f;
+        private float _preferredHeight = 100f;
 
         [SerializeField, Tooltip("Caps the height assigned by Looga Layout. Unity layout groups do not consume maximum values.")]
-        bool _useMaxHeight;
+        private bool _useMaxHeight;
 
         [SerializeField, Min(0f)]
-        float _maxHeight = 1000f;
+        private float _maxHeight = 1000f;
 
         [SerializeField, Tooltip("Overrides how strongly this element grows into extra vertical space.")]
-        bool _overrideFlexibleHeight;
+        private bool _overrideFlexibleHeight;
 
         [SerializeField, Min(0f)]
-        float _flexibleHeight;
+        private float _flexibleHeight;
 
         [SerializeField, Tooltip("Higher-priority layout values override lower-priority values on the same object.")]
-        int _layoutPriority = 1;
+        private int _layoutPriority = 1;
 
         public bool ignoreLayout => _ignoreLayout;
         public float minWidth => _overrideMinWidth ? _minWidth : -1f;
@@ -71,7 +72,10 @@ namespace LoogaSoft.UI.Extensions
         public float preferredHeight => _overridePreferredHeight ? Mathf.Max(_preferredHeight, minHeight) : -1f;
         public float flexibleHeight => _overrideFlexibleHeight ? _flexibleHeight : -1f;
         public int layoutPriority => _layoutPriority;
+        /// <summary>Gets the optional maximum width consumed by Looga Layout.</summary>
         public float MaxWidth => _useMaxWidth ? Mathf.Max(_maxWidth, 0f) : float.PositiveInfinity;
+
+        /// <summary>Gets the optional maximum height consumed by Looga Layout.</summary>
         public float MaxHeight => _useMaxHeight ? Mathf.Max(_maxHeight, 0f) : float.PositiveInfinity;
 
         public void CalculateLayoutInputHorizontal()
@@ -118,7 +122,7 @@ namespace LoogaSoft.UI.Extensions
         }
 #endif
 
-        void SetDirty()
+        private void SetDirty()
         {
             if (!IsActive())
             {
