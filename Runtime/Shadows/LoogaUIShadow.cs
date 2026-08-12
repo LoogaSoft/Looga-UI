@@ -12,7 +12,7 @@ namespace LoogaSoft.UI.Extensions
     [AddComponentMenu("LoogaSoft/UI/Looga UI Shadow")]
     public sealed class LoogaUIShadow : MonoBehaviour
     {
-        const string ShadowObjectName = "Looga UI Shadow Renderer";
+        public const string ShadowObjectName = "Looga UI Shadow Renderer";
         const float MinResolutionScale = 0.125f;
         const float MaxResolutionScale = 1f;
         const int MaxGeneratedSize = 2048;
@@ -191,7 +191,14 @@ namespace LoogaSoft.UI.Extensions
             CancelAsyncRebuild();
             ReleaseGeneratedTexture();
 
-            ReleaseRenderer();
+            if (Application.isPlaying)
+            {
+                ReleaseRenderer();
+            }
+            else
+            {
+                ClearRendererReferences();
+            }
         }
 
         void OnValidate()
@@ -327,6 +334,7 @@ namespace LoogaSoft.UI.Extensions
             if (_shadowImage != null)
             {
                 _shadowImage.enabled = isActiveAndEnabled;
+                EnsureRendererOwner();
                 EnsureIgnoredByLayout();
                 return;
             }
@@ -337,18 +345,85 @@ namespace LoogaSoft.UI.Extensions
                 return;
             }
 
-            GameObject shadowObject = new(ShadowObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage), typeof(LayoutElement));
+            if (TryAdoptRenderer(parent))
+            {
+                _shadowImage.enabled = isActiveAndEnabled;
+                EnsureIgnoredByLayout();
+                return;
+            }
+
+            GameObject shadowObject = new(
+                ShadowObjectName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(RawImage),
+                typeof(LayoutElement),
+                typeof(LoogaUIShadowRendererOwner));
             shadowObject.hideFlags = HideFlags.HideAndDontSave;
+            RegisterRendererWithUndo(shadowObject);
             _shadowRect = shadowObject.GetComponent<RectTransform>();
             _shadowImage = shadowObject.GetComponent<RawImage>();
             _shadowLayoutElement = shadowObject.GetComponent<LayoutElement>();
             _shadowObject = shadowObject;
+            EnsureRendererOwner();
             EnsureIgnoredByLayout();
             shadowObject.transform.SetParent(parent, false);
             shadowObject.transform.SetSiblingIndex(transform.GetSiblingIndex());
             _shadowImage.raycastTarget = false;
             _shadowImage.maskable = _graphic is not MaskableGraphic maskableGraphic || maskableGraphic.maskable;
             _shadowImage.enabled = isActiveAndEnabled;
+        }
+
+        static void RegisterRendererWithUndo(GameObject shadowObject)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                LoogaUIShadowEditorBridge.RegisterCreatedObjectUndo?.Invoke(shadowObject);
+            }
+#endif
+        }
+
+        bool TryAdoptRenderer(Transform parent)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                if (child.name != ShadowObjectName)
+                {
+                    continue;
+                }
+
+                LoogaUIShadowRendererOwner owner = child.GetComponent<LoogaUIShadowRendererOwner>();
+                if (owner == null || owner.Owner != this)
+                {
+                    continue;
+                }
+
+                _shadowObject = child.gameObject;
+                _shadowRect = child as RectTransform;
+                _shadowImage = child.GetComponent<RawImage>();
+                _shadowLayoutElement = child.GetComponent<LayoutElement>();
+                return _shadowRect != null && _shadowImage != null;
+            }
+
+            return false;
+        }
+
+        void EnsureRendererOwner()
+        {
+            if (_shadowImage == null)
+            {
+                return;
+            }
+
+            LoogaUIShadowRendererOwner owner = _shadowImage.GetComponent<LoogaUIShadowRendererOwner>();
+            if (owner == null)
+            {
+                owner = _shadowImage.gameObject.AddComponent<LoogaUIShadowRendererOwner>();
+            }
+
+            owner.Assign(this);
         }
 
         void EnsureIgnoredByLayout()
@@ -1229,10 +1304,7 @@ namespace LoogaSoft.UI.Extensions
         void ReleaseRenderer()
         {
             GameObject shadowObject = _shadowObject != null ? _shadowObject : _shadowImage != null ? _shadowImage.gameObject : null;
-            _shadowObject = null;
-            _shadowImage = null;
-            _shadowRect = null;
-            _shadowLayoutElement = null;
+            ClearRendererReferences();
 
             if (shadowObject == null)
             {
@@ -1240,6 +1312,14 @@ namespace LoogaSoft.UI.Extensions
             }
 
             DestroyGeneratedObject(shadowObject);
+        }
+
+        void ClearRendererReferences()
+        {
+            _shadowObject = null;
+            _shadowImage = null;
+            _shadowRect = null;
+            _shadowLayoutElement = null;
         }
 
         readonly struct ShadowBuildRequest
