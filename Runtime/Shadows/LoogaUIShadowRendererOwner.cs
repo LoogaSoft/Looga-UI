@@ -8,7 +8,7 @@ namespace LoogaSoft.UI.Extensions
     [AddComponentMenu("")]
     public sealed class LoogaUIShadowRendererOwner : MonoBehaviour
     {
-        [SerializeField, HideInInspector] LoogaUIShadow _owner;
+        [SerializeField, HideInInspector] private LoogaUIShadow _owner;
 
         public LoogaUIShadow Owner => _owner;
 
@@ -17,7 +17,7 @@ namespace LoogaSoft.UI.Extensions
             _owner = owner;
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             if (_owner != null)
             {

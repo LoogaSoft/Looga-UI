@@ -10,48 +10,48 @@ namespace LoogaSoft.UI.Extensions
     [AddComponentMenu("LoogaSoft/UI/Looga UI Shine")]
     public sealed class LoogaUIShine : UIBehaviour, IMaterialModifier
     {
-        const float StartPosition = -0.5f;
-        const float EndPosition = 1.5f;
+        private const float StartPosition = -0.5f;
+        private const float EndPosition = 1.5f;
 
         [Header("Shine")]
         [SerializeField, Tooltip("Color and opacity of the shine band.")]
-        Color _color = new(1f, 1f, 1f, 0.45f);
+        private Color _color = new(1f, 1f, 1f, 0.45f);
 
         [SerializeField, Range(0f, 360f), Tooltip("Direction of the shine band in degrees.")]
-        float _angle = 25f;
+        private float _angle = 25f;
 
         [SerializeField, Range(0.01f, 1f), Tooltip("Width of the shine band across the graphic.")]
-        float _width = 0.18f;
+        private float _width = 0.18f;
 
         [SerializeField, Range(0f, 1f), Tooltip("Softens the edges of the shine band.")]
-        float _softness = 0.45f;
+        private float _softness = 0.45f;
 
         [SerializeField, Range(StartPosition, EndPosition), Tooltip("Manual shine position. Useful for edit-mode preview or scripted control.")]
-        float _position = StartPosition;
+        private float _position = StartPosition;
 
         [Header("Playback")]
         [SerializeField, Tooltip("Automatically play the shine sweep when the component is enabled.")]
-        bool _playOnEnable = true;
+        private bool _playOnEnable = true;
 
         [SerializeField, Tooltip("Loop the shine sweep while the component remains enabled.")]
-        bool _loop = true;
+        private bool _loop = true;
 
         [SerializeField, Min(0.01f), Tooltip("Seconds for one complete shine sweep.")]
-        float _duration = 1.25f;
+        private float _duration = 1.25f;
 
         [SerializeField, Min(0f), Tooltip("Seconds to wait before each shine sweep starts.")]
-        float _delay = 0f;
+        private float _delay = 0f;
 
         [SerializeField, Tooltip("Use unscaled time so UI shine animation keeps moving while game time is paused.")]
-        bool _useUnscaledTime = true;
+        private bool _useUnscaledTime = true;
 
-        Material _replacement;
-        Material _original;
-        Graphic _graphic;
-        float _elapsed;
-        bool _playing;
+        private Material _replacement;
+        private Material _original;
+        private Graphic _graphic;
+        private float _elapsed;
+        private bool _playing;
 
-        Graphic Graphic => _graphic != null ? _graphic : (_graphic = GetComponent<Graphic>());
+        private Graphic Graphic => _graphic != null ? _graphic : (_graphic = GetComponent<Graphic>());
 
         public Material GetModifiedMaterial(Material baseMaterial)
         {
@@ -104,8 +104,7 @@ namespace LoogaSoft.UI.Extensions
                 ApplyMaterialParameters(_replacement);
             }
 
-            // The shine can be one link in Unity's material modifier chain. Marking the
-            // graphic dirty keeps animated position changes correct regardless of order.
+            // Mark the graphic dirty because this modifier can appear at any position in Unity's material chain.
             SetDirty();
         }
 
@@ -133,7 +132,7 @@ namespace LoogaSoft.UI.Extensions
             base.OnDestroy();
         }
 
-        void Update()
+        private void Update()
         {
             if (!Application.isPlaying || !_playing)
             {

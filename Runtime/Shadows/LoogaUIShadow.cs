@@ -13,28 +13,28 @@ namespace LoogaSoft.UI.Extensions
     public sealed class LoogaUIShadow : MonoBehaviour
     {
         public const string ShadowObjectName = "Looga UI Shadow Renderer";
-        const float MinResolutionScale = 0.125f;
-        const float MaxResolutionScale = 1f;
-        const int MaxGeneratedSize = 2048;
+        private const float MinResolutionScale = 0.125f;
+        private const float MaxResolutionScale = 1f;
+        private const int MaxGeneratedSize = 2048;
 
-        [SerializeField] LoogaUIShadowMode _mode = LoogaUIShadowMode.Outer;
-        [SerializeField] Color _color = new(0f, 0f, 0f, 0.45f);
-        [SerializeField] Vector2 _offset = new(0f, -4f);
-        [SerializeField, Min(0f)] float _softness = 12f;
-        [SerializeField, Min(0f)] float _spread = 2f;
-        [SerializeField, Range(MinResolutionScale, MaxResolutionScale)] float _resolutionScale = 0.5f;
-        [SerializeField] LoogaUIShadowQuality _quality = LoogaUIShadowQuality.Medium;
+        [SerializeField] private LoogaUIShadowMode _mode = LoogaUIShadowMode.Outer;
+        [SerializeField] private Color _color = new(0f, 0f, 0f, 0.45f);
+        [SerializeField] private Vector2 _offset = new(0f, -4f);
+        [SerializeField, Min(0f)] private float _softness = 12f;
+        [SerializeField, Min(0f)] private float _spread = 2f;
+        [SerializeField, Range(MinResolutionScale, MaxResolutionScale)] private float _resolutionScale = 0.5f;
+        [SerializeField] private LoogaUIShadowQuality _quality = LoogaUIShadowQuality.Medium;
         [SerializeField, Tooltip("Uses the source sprite alpha when building the shadow mask. Falls back to a rectangle if the texture cannot be sampled.")]
-        bool _useSourceAlpha = true;
+        private bool _useSourceAlpha = true;
         [FormerlySerializedAs("_clipOuterShadowBehindSource")]
         [SerializeField, Tooltip("Removes outer shadow pixels that would render behind the source graphic.")]
-        bool _clipSource = true;
+        private bool _clipSource = true;
         [SerializeField, Tooltip("Applies subtle ordered dithering when writing generated alpha to reduce visible bands in soft shadows.")]
-        bool _dither = true;
+        private bool _dither = true;
         [SerializeField, Tooltip("Releases the generated texture when disabled. Turn this off only for frequently toggled UI that should keep its cached shadow texture.")]
-        bool _deallocateOnDisable = true;
+        private bool _deallocateOnDisable = true;
         [SerializeField, Tooltip("Builds shadow pixels on UniTask's thread pool, then applies the generated texture on the main thread.")]
-        bool _useAsyncRebuild = true;
+        private bool _useAsyncRebuild = true;
 
         Graphic _graphic;
         RectTransform _rectTransform;
@@ -214,7 +214,7 @@ namespace LoogaSoft.UI.Extensions
             MarkDirty();
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             if (_graphic == null || _rectTransform == null)
             {

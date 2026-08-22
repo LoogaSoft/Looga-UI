@@ -12,52 +12,52 @@ namespace LoogaSoft.UI.Extensions
     [AddComponentMenu("LoogaSoft/UI/Looga UI Soft Mask")]
     public sealed class LoogaUISoftMask : UIBehaviour, ICanvasRaycastFilter
     {
-        static readonly List<LoogaUISoftMaskTarget> TargetBuffer = new();
-        static readonly List<Graphic> GraphicBuffer = new();
+        private static readonly List<LoogaUISoftMaskTarget> TargetBuffer = new();
+        private static readonly List<Graphic> GraphicBuffer = new();
 
         [Header("Mask")]
         [SerializeField, Tooltip("Where the mask alpha comes from. Graphic uses the Image or RawImage on the mask object.")]
-        LoogaUISoftMaskSource _source = LoogaUISoftMaskSource.Graphic;
+        private LoogaUISoftMaskSource _source = LoogaUISoftMaskSource.Graphic;
 
         [SerializeField, Tooltip("How child graphics become affected by this mask. Automatic Children is the normal designer workflow.")]
-        LoogaUISoftMaskTargetMode _targetMode = LoogaUISoftMaskTargetMode.AutomaticChildren;
+        private LoogaUISoftMaskTargetMode _targetMode = LoogaUISoftMaskTargetMode.AutomaticChildren;
 
         [SerializeField, Tooltip("Optional RectTransform used as the mask bounds. If empty, this object's RectTransform is used.")]
-        RectTransform _maskTransform;
+        private RectTransform _maskTransform;
 
         [SerializeField, Tooltip("Sprite used when Source is Sprite.")]
-        Sprite _sprite;
+        private Sprite _sprite;
 
         [SerializeField, Tooltip("Texture or render texture used when Source is Texture.")]
-        Texture _texture;
+        private Texture _texture;
 
         [SerializeField, Tooltip("Normalized UV rectangle used when Source is Texture.")]
-        Rect _textureUvRect = new(0f, 0f, 1f, 1f);
+        private Rect _textureUvRect = new(0f, 0f, 1f, 1f);
 
         [SerializeField, Tooltip("The mask texture channel used to calculate visibility.")]
-        LoogaUISoftMaskChannel _channel = LoogaUISoftMaskChannel.Alpha;
+        private LoogaUISoftMaskChannel _channel = LoogaUISoftMaskChannel.Alpha;
 
         [Header("Behavior")]
         [SerializeField, Tooltip("Invert visibility inside the mask bounds.")]
-        bool _invert;
+        private bool _invert;
 
         [SerializeField, Tooltip("Make pixels outside the mask bounds visible instead of hidden.")]
-        bool _invertOutside;
+        private bool _invertOutside;
 
         [SerializeField, Tooltip("When enabled, pointer input is filtered by the mask alpha.")]
-        bool _affectRaycasts;
+        private bool _affectRaycasts;
 
         [SerializeField, Range(0f, 1f), Tooltip("Minimum sampled mask value required for a raycast to pass. Requires a CPU-readable Texture2D source.")]
-        float _raycastThreshold = 0.1f;
+        private float _raycastThreshold = 0.1f;
 
         [SerializeField, Tooltip("Include inactive child graphics when automatically assigning mask targets.")]
-        bool _includeInactiveTargets;
+        private bool _includeInactiveTargets;
 
-        readonly LoogaUISoftMaskMaterialCache _materials;
-        RectTransform _rectTransform;
-        Graphic _graphic;
-        Canvas _canvas;
-        bool _dirty = true;
+        private readonly LoogaUISoftMaskMaterialCache _materials;
+        private RectTransform _rectTransform;
+        private Graphic _graphic;
+        private Canvas _canvas;
+        private bool _dirty = true;
 
         public LoogaUISoftMask()
         {
@@ -67,17 +67,17 @@ namespace LoogaSoft.UI.Extensions
         public bool IsMaskingEnabled => isActiveAndEnabled && Canvas != null;
         public LoogaUISoftMaskTargetMode TargetMode => _targetMode;
 
-        RectTransform ActiveMaskTransform => _maskTransform != null ? _maskTransform : RectTransform;
+        private RectTransform ActiveMaskTransform => _maskTransform != null ? _maskTransform : RectTransform;
 
-        RectTransform RectTransform => _rectTransform != null
+        private RectTransform RectTransform => _rectTransform != null
             ? _rectTransform
             : (_rectTransform = transform as RectTransform);
 
-        Canvas Canvas => _canvas != null
+        private Canvas Canvas => _canvas != null
             ? _canvas
             : (_canvas = GetComponentInParent<Canvas>());
 
-        Graphic Graphic => _graphic != null
+        private Graphic Graphic => _graphic != null
             ? _graphic
             : (_graphic = ActiveMaskTransform != null ? ActiveMaskTransform.GetComponent<Graphic>() : null);
 
@@ -193,7 +193,7 @@ namespace LoogaSoft.UI.Extensions
         }
 #endif
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             if (_targetMode == LoogaUISoftMaskTargetMode.AutomaticChildren)
             {
@@ -201,7 +201,7 @@ namespace LoogaSoft.UI.Extensions
             }
         }
 
-        void HandleWillRenderCanvases()
+        private void HandleWillRenderCanvases()
         {
             if (!IsMaskingEnabled)
             {
@@ -216,7 +216,7 @@ namespace LoogaSoft.UI.Extensions
             }
         }
 
-        void RegisterGraphicCallbacks()
+        private void RegisterGraphicCallbacks()
         {
             Graphic graphic = Graphic;
             if (graphic == null)
