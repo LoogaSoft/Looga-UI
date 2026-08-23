@@ -1,0 +1,22 @@
+{
+    "name": "LoogaSoft.Menu.R3",
+    "rootNamespace": "LoogaSoft.Menu",
+    "references": [
+        "LoogaSoft.Menu.Runtime",
+        "R3",
+        "R3.Unity",
+        "ObservableCollections",
+        "ObservableCollections.R3"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "LOOGA_MENU_R3_SUPPORT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

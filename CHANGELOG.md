@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0 - 2026-08-23
+
+- Merged Looga Menu Framework into Looga UI while preserving all `LoogaSoft.Menu.*` assembly names, namespaces, and Unity asset GUIDs.
+- Consolidated menu authoring commands under `LoogaSoft > UI > Menus`.
+- Grouped menu R3 support with the other Looga UI integrations in Package Support.
+- Added menu authoring and migration documentation.
+
 ## 1.1.1 - 2026-07-31
 
 - Made optional UniTask support compatible with Git and immutable package installations.

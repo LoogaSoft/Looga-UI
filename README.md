@@ -1,6 +1,19 @@
 # Looga UI
 
-Looga UI contains reusable UGUI layout tools, effects, and procedural graphics for LoogaSoft projects.
+Looga UI is a designer-first UGUI package for menu architecture, design systems, layout, effects, and procedural graphics. Menu features remain isolated in their existing `LoogaSoft.Menu.*` assemblies so projects can use the rest of Looga UI without coupling their runtime code to menu APIs.
+
+## Menus
+
+The menu module uses four primary concepts:
+
+- A **screen** is a destination that Back can return from.
+- A **layout** is one arrangement of the same screen. Switching layouts does not change menu history.
+- A **panel** is one reusable UI section.
+- A **shared slot** is authored UI reused across screens, such as a header, navigation bar, action bar, or background.
+
+Open `LoogaSoft > UI > Menus > Menu Project` to create or locate a menu project. Open `LoogaSoft > UI > Menus > Menu Preview` to inspect screens and layouts without entering Play Mode.
+
+See [Menus](Documentation~/Menus.md) for setup and authoring guidance.
 
 ## Design System
 
@@ -134,7 +147,7 @@ The first implementation targets sprite-backed UGUI graphics. Source sprite alph
 
 ### Optional UniTask Support
 
-Install UniTask through Unity Package Manager, then use `LoogaSoft > UI > Enable UniTask Support`.
+Install UniTask through Unity Package Manager, then manage the integration under `LoogaSoft > Package Support > Looga UI`.
 Looga UI detects the package through a separate optional assembly, so this works for Git, registry,
 embedded, and local package installations without modifying Looga UI's cached `.asmdef` files.
 When enabled, `LoogaUIShadow` can snapshot Unity object data on the main thread, build expensive

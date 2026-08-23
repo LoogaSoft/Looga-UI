@@ -1,0 +1,20 @@
+{
+    "name": "LoogaSoft.Menu.Editor",
+    "rootNamespace": "LoogaSoft",
+    "references": [
+        "LoogaSoft.Blackboard.Runtime",
+        "LoogaSoft.Inspector.Editor",
+        "LoogaSoft.Menu.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,12 +1,15 @@
 {
   "displayName": "Looga UI",
   "name": "com.loogasoft.loogaui",
-  "description": "Reusable UGUI design systems, layouts, effects, procedural graphics, masking, and UI utilities for LoogaSoft projects.",
-  "version": "1.2.0",
+  "description": "A designer-first UGUI package for menu architecture, design systems, layouts, effects, procedural graphics, masking, and shared UI utilities.",
+  "version": "2.0.0",
   "author": {
     "name": "LoogaSoft"
   },
   "dependencies": {
+    "com.loogasoft.loogablackboard": "1.0.0",
+    "com.loogasoft.loogatoolkit": "2.0.0",
+    "com.unity.inputsystem": "1.0.0",
     "com.unity.ugui": "1.0.0"
   }
 }

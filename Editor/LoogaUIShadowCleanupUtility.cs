@@ -29,7 +29,7 @@ namespace LoogaSoft.UI.Extensions.Editor
             LoogaUIShadowEditorBridge.RegisterCreatedObjectUndo = null;
         }
 
-        [MenuItem("LoogaSoft/Looga UI/Cleanup Generated Shadows", priority = 22)]
+        [MenuItem("LoogaSoft/UI/Cleanup Generated Shadows", priority = 22)]
         static void CleanupFromMenu()
         {
             int removed = CleanupGeneratedRenderers(rebuildAll: true);
