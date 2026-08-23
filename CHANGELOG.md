@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Consolidated menu and design-system R3 adapters behind one Package Support integration.
+
 ## 2.0.0 - 2026-08-23
 
 - Merged Looga Menu Framework into Looga UI while preserving all `LoogaSoft.Menu.*` assembly names, namespaces, and Unity asset GUIDs.

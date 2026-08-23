@@ -26,25 +26,37 @@ namespace LoogaSoft.UI.Extensions.Editor
 
         public static void AddDefineSymbol(string defineSymbol)
         {
-            List<string> defines = GetDefines();
-            if (defines.Contains(defineSymbol))
-            {
-                return;
-            }
-
-            defines.Add(defineSymbol);
-            ApplyDefineSymbols(defines);
+            SetDefineSymbols(new[] { defineSymbol }, true);
         }
 
         public static void RemoveDefineSymbol(string defineSymbol)
         {
+            SetDefineSymbols(new[] { defineSymbol }, false);
+        }
+
+        public static void SetDefineSymbols(IReadOnlyList<string> defineSymbols, bool enabled)
+        {
             List<string> defines = GetDefines();
-            if (!defines.Remove(defineSymbol))
+            bool changed = false;
+            for (int i = 0; i < defineSymbols.Count; i++)
             {
-                return;
+                string defineSymbol = defineSymbols[i];
+                if (enabled)
+                {
+                    if (!defines.Contains(defineSymbol))
+                    {
+                        defines.Add(defineSymbol);
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    changed |= defines.Remove(defineSymbol);
+                }
             }
 
-            ApplyDefineSymbols(defines);
+            if (changed)
+                ApplyDefineSymbols(defines);
         }
 
         static bool AssemblyIsAvailable(string assemblyName)
