@@ -2,6 +2,40 @@
 
 Looga UI contains reusable UGUI layout tools, effects, and procedural graphics for LoogaSoft projects.
 
+## Design System
+
+The design system separates semantic UI intent from scene-authored colors, fonts, and interaction states.
+Its core uses normal C# events and Unity lifecycle callbacks. It does not poll and does not require R3.
+
+### Core Assets
+
+- `LoogaDesignSystem` identifies the default theme and the element styles used by one product.
+- `LoogaTheme` maps typed color and typography tokens to one visual theme.
+- `LoogaColorToken` and `LoogaTypographyToken` define semantic roles such as primary text, surface, accent, heading, and caption.
+- `LoogaElementStyle` combines optional graphic, TextMeshPro, and Selectable settings into one reusable recipe.
+- `LoogaThemeScope` selects a design system or local theme override for one UI hierarchy.
+- `LoogaStyleBinding` applies one element style to the UGUI/TMP components on its GameObject.
+
+### Recommended Setup
+
+1. Create semantic color and typography tokens under `Create > LoogaSoft > UI > Design System`.
+2. Create one theme and assign values for those tokens.
+3. Create one design-system asset and assign its default theme.
+4. Add `LoogaThemeScope` to the Canvas or another stable UI root.
+5. Create element styles such as Primary Button, Panel Surface, Heading, and Currency Value.
+6. Add `LoogaStyleBinding` to authored UI objects and assign the relevant element style.
+
+Changing a theme, token, or element style reapplies affected bindings in Edit Mode and at runtime.
+Nested scopes can replace the active theme for a menu, faction, event, or accessibility context.
+Use `LoogaSoft > UI > Design System` to find unbound UI in loaded scenes, add bindings to selected objects,
+and reapply all loaded bindings. The audit never assigns semantic styles automatically.
+
+### Optional R3 Support
+
+Enable R3 for Looga UI in `LoogaSoft > Package Support` when the project needs to compose style changes with other reactive state.
+The adapter exposes the design change stream, active scope theme, and style-application events as observables.
+Normal bindings remain event-driven and do not need one subscription per token.
+
 ## Layout
 
 The layout system replaces common chains of Unity layout groups, layout elements, and content-size fitters with three focused components. It uses Unity's normal `ILayoutElement` and layout rebuild contracts, so nested layouts propagate size changes upward without polling or per-frame reactive subscriptions.

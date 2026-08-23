@@ -2,7 +2,8 @@
   "name": "LoogaSoft.UI.Extensions.Runtime",
   "rootNamespace": "LoogaSoft.UI",
   "references": [
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

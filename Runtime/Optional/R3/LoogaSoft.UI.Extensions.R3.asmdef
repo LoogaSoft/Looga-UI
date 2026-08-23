@@ -1,0 +1,19 @@
+{
+  "name": "LoogaSoft.UI.Extensions.R3",
+  "rootNamespace": "LoogaSoft.UI.Extensions.R3",
+  "references": [
+    "LoogaSoft.UI.Extensions.Runtime",
+    "R3"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "LOOGA_UI_R3_SUPPORT"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
