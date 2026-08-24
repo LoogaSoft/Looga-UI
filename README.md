@@ -28,6 +28,9 @@ Its core uses normal C# events and Unity lifecycle callbacks. It does not poll a
 - `LoogaElementStyle` combines optional graphic, TextMeshPro, and Selectable settings into one reusable recipe.
 - `LoogaThemeScope` selects a design system or local theme override for one UI hierarchy.
 - `LoogaStyleBinding` applies one element style to the UGUI/TMP components on its GameObject.
+- `LoogaButton`, `LoogaToggle`, `LoogaSlider`, and `LoogaScrollbar` replace their Unity UI counterparts while retaining Unity behavior and serialization.
+- `LoogaInputField` and `LoogaDropdown` replace their TextMeshPro counterparts in the same way.
+- Typed control-style assets group each control's visual roles into one reusable recipe.
 
 ### Recommended Setup
 
@@ -37,6 +40,13 @@ Its core uses normal C# events and Unity lifecycle callbacks. It does not poll a
 4. Add `LoogaThemeScope` to the Canvas or another stable UI root.
 5. Create element styles such as Primary Button, Panel Surface, Heading, and Currency Value.
 6. Add `LoogaStyleBinding` to authored UI objects and assign the relevant element style.
+
+Use the Looga control components when a control needs one clear appearance owner. In **Design System** mode,
+the assigned typed style controls appearance and the inspector hides local transition settings. In **Local**
+mode, the normal Unity or TextMeshPro appearance settings remain available. Existing controls can be converted
+in place from their component context menu or with `GameObject > LoogaSoft > UI > Convert Selected Controls`.
+Conversion preserves the component identity, references, events, values, and navigation settings. Converted
+controls start in Local mode so adopting Looga UI does not silently change their appearance.
 
 Changing a theme, token, or element style reapplies affected bindings in Edit Mode and at runtime.
 Nested scopes can replace the active theme for a menu, faction, event, or accessibility context.

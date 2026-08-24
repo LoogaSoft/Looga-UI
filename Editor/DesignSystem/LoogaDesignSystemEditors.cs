@@ -1,3 +1,4 @@
+using LoogaSoft.UI.Controls;
 using LoogaSoft.UI.Design;
 using UnityEditor;
 using UnityEngine;
@@ -23,14 +24,29 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             LoogaStyleBinding[] bindings = Object.FindObjectsByType<LoogaStyleBinding>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
+            MonoBehaviour[] behaviours = Object.FindObjectsByType<MonoBehaviour>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
 
             foreach (LoogaStyleBinding binding in bindings)
             {
                 binding.ApplyStyle();
             }
 
+            int controlCount = 0;
+            foreach (MonoBehaviour behaviour in behaviours)
+            {
+                if (behaviour is not ILoogaStyledControl control)
+                {
+                    continue;
+                }
+
+                control.ApplyStyle();
+                controlCount++;
+            }
+
             SceneView.RepaintAll();
-            Debug.Log($"Looga UI applied {bindings.Length} style binding(s) in open scenes.");
+            Debug.Log($"Looga UI applied {bindings.Length} binding(s) and {controlCount} control style(s) in open scenes.");
         }
     }
 

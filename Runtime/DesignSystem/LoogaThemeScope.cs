@@ -33,6 +33,24 @@ namespace LoogaSoft.UI.Design
                     ? _parentScope.ActiveTheme
                     : null;
 
+        /// <summary>Finds the nearest theme scope at or above the supplied transform.</summary>
+        public static LoogaThemeScope FindNearest(Transform source)
+        {
+            Transform current = source;
+
+            while (current != null)
+            {
+                if (current.TryGetComponent(out LoogaThemeScope scope))
+                {
+                    return scope;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
+        }
+
         /// <summary>Sets the local theme override.</summary>
         public void SetThemeOverride(LoogaTheme theme)
         {
@@ -79,19 +97,7 @@ namespace LoogaSoft.UI.Design
 
         private void ResolveParentScope()
         {
-            _parentScope = null;
-            Transform current = transform.parent;
-
-            while (current != null)
-            {
-                if (current.TryGetComponent(out LoogaThemeScope scope))
-                {
-                    _parentScope = scope;
-                    return;
-                }
-
-                current = current.parent;
-            }
+            _parentScope = FindNearest(transform.parent);
         }
 
         private void SubscribeToParent()

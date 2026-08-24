@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LoogaSoft.UI.Controls;
 using LoogaSoft.UI.Design;
 using TMPro;
 using UnityEditor;
@@ -80,7 +81,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
             foreach (GameObject candidate in candidates)
             {
-                if (!candidate.TryGetComponent(out LoogaStyleBinding _))
+                if (!HasStyleOwner(candidate))
                 {
                     _unboundObjects.Add(candidate);
                 }
@@ -107,10 +108,21 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             LoogaStyleBinding[] bindings = Object.FindObjectsByType<LoogaStyleBinding>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
+            MonoBehaviour[] behaviours = Object.FindObjectsByType<MonoBehaviour>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
 
             for (int i = 0; i < bindings.Length; i++)
             {
                 bindings[i].ApplyStyle();
+            }
+
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is ILoogaStyledControl control)
+                {
+                    control.ApplyStyle();
+                }
             }
 
             SceneView.RepaintAll();
@@ -123,7 +135,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             for (int i = 0; i < selectedObjects.Length; i++)
             {
                 GameObject selectedObject = selectedObjects[i];
-                if (!IsStyleable(selectedObject) || selectedObject.TryGetComponent(out LoogaStyleBinding _))
+                if (!IsStyleable(selectedObject) || HasStyleOwner(selectedObject))
                 {
                     continue;
                 }
@@ -139,6 +151,26 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             return gameObject.TryGetComponent(out Graphic _) ||
                    gameObject.TryGetComponent(out TMP_Text _) ||
                    gameObject.TryGetComponent(out Selectable _);
+        }
+
+        private static bool HasStyleOwner(GameObject gameObject)
+        {
+            if (gameObject.TryGetComponent(out LoogaStyleBinding _))
+            {
+                return true;
+            }
+
+            MonoBehaviour[] behaviours = gameObject.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is ILoogaStyledControl control &&
+                    control.StyleSource == LoogaControlStyleSource.DesignSystem)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string GetPath(GameObject gameObject)

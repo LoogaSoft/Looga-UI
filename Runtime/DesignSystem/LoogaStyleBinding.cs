@@ -68,6 +68,7 @@ namespace LoogaSoft.UI.Design
         private void OnDisable()
         {
             Unsubscribe();
+            _scope = null;
         }
 
         private void OnTransformParentChanged()
@@ -103,19 +104,7 @@ namespace LoogaSoft.UI.Design
 
         private void RefreshScope()
         {
-            LoogaThemeScope resolvedScope = null;
-            Transform current = transform;
-
-            while (current != null)
-            {
-                if (current.TryGetComponent(out LoogaThemeScope scope))
-                {
-                    resolvedScope = scope;
-                    break;
-                }
-
-                current = current.parent;
-            }
+            LoogaThemeScope resolvedScope = LoogaThemeScope.FindNearest(transform);
 
             if (_scope == resolvedScope)
             {
