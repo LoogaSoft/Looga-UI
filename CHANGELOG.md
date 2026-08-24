@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Kept one-off captured element styles internal while exposing only reusable or explicitly promoted styles in the public design-system library.
+- Added loaded-scene style analysis, conservative public-style consolidation, explicit promotion, and selected-binding merge tools.
+- Normalized insignificant capture precision so visually equivalent authored elements can share generated styles.
+
 ## 2.3.1 - 2026-08-24
 
 - Excluded typed-control internals from the standalone element-style collection.

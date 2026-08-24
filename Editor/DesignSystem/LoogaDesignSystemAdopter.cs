@@ -39,6 +39,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             new Dictionary<string, LoogaDropdownStyle>();
         private static readonly HashSet<LoogaElementStyle> StandaloneElementStyles =
             new HashSet<LoogaElementStyle>();
+        private static readonly Dictionary<LoogaElementStyle, int> StandaloneStyleUsage =
+            new Dictionary<LoogaElementStyle, int>();
         private static readonly HashSet<Component> OwnedVisuals = new HashSet<Component>();
 
         private static LoogaDesignSystem _designSystem;
@@ -79,13 +81,15 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             Selection.activeObject = _designSystem;
             EditorGUIUtility.PingObject(_designSystem);
 
+            int publicStyleCount = CountPublicElementStyles();
             return new AdoptionResult(
                 _assetPath,
                 _adoptedControls,
                 _adoptedElements,
                 ColorTokens.Count,
                 TypographyTokens.Count,
-                StandaloneElementStyles.Count,
+                publicStyleCount,
+                StandaloneElementStyles.Count - publicStyleCount,
                 ElementStyles.Count - StandaloneElementStyles.Count,
                 ButtonStyles.Count + ToggleStyles.Count + SliderStyles.Count +
                 ScrollbarStyles.Count + InputFieldStyles.Count + DropdownStyles.Count);
@@ -272,6 +276,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 }
 
                 StandaloneElementStyles.Add(style);
+                IncrementUsage(style);
                 LoogaStyleBinding binding = candidate.GetComponent<LoogaStyleBinding>();
                 if (binding == null)
                 {
@@ -412,7 +417,18 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private static void RegisterStyles()
         {
             SerializedObject serializedSystem = new SerializedObject(_designSystem);
-            SetArray(serializedSystem, "_styles", StandaloneElementStyles);
+            List<LoogaElementStyle> publicStyles = new List<LoogaElementStyle>();
+            foreach (LoogaElementStyle style in StandaloneElementStyles)
+            {
+                StandaloneStyleUsage.TryGetValue(style, out int usage);
+                if (style.KeepPublic || usage >= 2)
+                {
+                    publicStyles.Add(style);
+                }
+            }
+
+            publicStyles.Sort((left, right) => string.CompareOrdinal(left.name, right.name));
+            SetArray(serializedSystem, "_styles", publicStyles);
             SetArray(serializedSystem, "_buttonStyles", ButtonStyles.Values);
             SetArray(serializedSystem, "_toggleStyles", ToggleStyles.Values);
             SetArray(serializedSystem, "_sliderStyles", SliderStyles.Values);
@@ -687,23 +703,54 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         {
             return new StringBuilder()
                 .Append(text.font != null ? text.font.GetInstanceID() : 0).Append(':')
-                .Append(Float(text.fontSize)).Append(':')
+                .Append(NormalizedFloat(text.fontSize, 2)).Append(':')
                 .Append((int)text.fontStyle).Append(':')
-                .Append(Float(text.characterSpacing)).Append(':')
-                .Append(Float(text.wordSpacing)).Append(':')
-                .Append(Float(text.lineSpacing)).Append(':')
-                .Append(Float(text.paragraphSpacing))
+                .Append(NormalizedFloat(text.characterSpacing, 2)).Append(':')
+                .Append(NormalizedFloat(text.wordSpacing, 2)).Append(':')
+                .Append(NormalizedFloat(text.lineSpacing, 2)).Append(':')
+                .Append(NormalizedFloat(text.paragraphSpacing, 2))
                 .ToString();
         }
 
         private static string ColorFingerprint(Color color)
         {
-            return string.Join(",", Float(color.r), Float(color.g), Float(color.b), Float(color.a));
+            return string.Join(",",
+                NormalizedFloat(color.r, 3),
+                NormalizedFloat(color.g, 3),
+                NormalizedFloat(color.b, 3),
+                NormalizedFloat(color.a, 3));
         }
 
         private static string Float(float value)
         {
-            return value.ToString("R", CultureInfo.InvariantCulture);
+            return NormalizedFloat(value, 3);
+        }
+
+        private static string NormalizedFloat(float value, int decimals)
+        {
+            double normalized = Math.Round(value, decimals, MidpointRounding.AwayFromZero);
+            return normalized.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        private static void IncrementUsage(LoogaElementStyle style)
+        {
+            StandaloneStyleUsage.TryGetValue(style, out int count);
+            StandaloneStyleUsage[style] = count + 1;
+        }
+
+        private static int CountPublicElementStyles()
+        {
+            int count = 0;
+            foreach (LoogaElementStyle style in StandaloneElementStyles)
+            {
+                StandaloneStyleUsage.TryGetValue(style, out int usage);
+                if (style.KeepPublic || usage >= 2)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static string NextName(string role, int index)
@@ -817,6 +864,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             InputFieldStyles.Clear();
             DropdownStyles.Clear();
             StandaloneElementStyles.Clear();
+            StandaloneStyleUsage.Clear();
             OwnedVisuals.Clear();
             _designSystem = null;
             _theme = null;
@@ -833,7 +881,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 int elements,
                 int colors,
                 int typography,
-                int standaloneStyles,
+                int publicStyles,
+                int capturedStyles,
                 int internalElementStyles,
                 int controlStyles)
             {
@@ -842,7 +891,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Elements = elements;
                 Colors = colors;
                 Typography = typography;
-                StandaloneStyles = standaloneStyles;
+                PublicStyles = publicStyles;
+                CapturedStyles = capturedStyles;
                 InternalElementStyles = internalElementStyles;
                 ControlStyles = controlStyles;
             }
@@ -852,7 +902,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             internal int Elements { get; }
             internal int Colors { get; }
             internal int Typography { get; }
-            internal int StandaloneStyles { get; }
+            internal int PublicStyles { get; }
+            internal int CapturedStyles { get; }
             internal int InternalElementStyles { get; }
             internal int ControlStyles { get; }
         }

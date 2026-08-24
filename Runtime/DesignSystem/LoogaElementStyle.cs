@@ -8,9 +8,14 @@ namespace LoogaSoft.UI.Design
     [CreateAssetMenu(fileName = "New Element Style", menuName = "LoogaSoft/UI/Design System/Element Style")]
     public sealed class LoogaElementStyle : LoogaDesignAsset
     {
+        [SerializeField, Tooltip("Keep this style in the public design-system library even when only one object uses it.")]
+        private bool _keepPublic;
         [SerializeField] private LoogaGraphicStyleSettings _graphic;
         [SerializeField] private LoogaTextStyleSettings _text;
         [SerializeField] private LoogaSelectableStyleSettings _selectable;
+
+        /// <summary>Gets whether this style must remain in the public library.</summary>
+        public bool KeepPublic => _keepPublic;
 
         /// <summary>Applies this style to the supplied UGUI and TextMeshPro targets.</summary>
         public void Apply(LoogaTheme theme, Graphic graphic, TMP_Text text, Selectable selectable)

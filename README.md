@@ -44,8 +44,11 @@ For an existing authored UI, load its scenes and open `LoogaSoft > UI > Design S
 5. Adds a theme scope to each root Canvas.
 6. Assigns the generated styles to controls and remaining visual elements.
 
-The generated assets live under `Assets/Project/Databases/UI/Design System` by default. Rename the generated
-roles and deliberately merge styles that have the same semantic purpose after verifying the result.
+The generated assets live under `Assets/Project/Databases/UI/Design System` by default. Captured one-off styles
+remain internal sub-assets so every binding preserves its authored appearance without crowding the public library.
+Styles reused by multiple objects are exposed automatically. Use the **Style Library** tools to analyze loaded UI,
+promote an intentional one-off style, merge selected bindings into one semantic style, or consolidate the public
+list after changing the reuse threshold.
 
 For a new UI without authored visuals, create tokens, a theme, element styles, and typed control styles under
 `Create > LoogaSoft > UI > Design System`. Add `LoogaThemeScope` to the stable UI root, then assign styles as

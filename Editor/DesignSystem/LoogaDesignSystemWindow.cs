@@ -11,6 +11,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     public sealed class LoogaDesignSystemWindow : EditorWindow
     {
         private readonly List<GameObject> _unboundObjects = new List<GameObject>();
+        private LoogaDesignSystem _designSystem;
+        private LoogaElementStyle _mergeTarget;
+        private int _reuseThreshold = 2;
+        private string _librarySummary;
         private string _adoptionOutputFolder = LoogaDesignSystemAdopter.DefaultOutputFolder;
         private string _adoptionSummary;
         private Vector2 _scrollPosition;
@@ -21,9 +25,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             GetWindow<LoogaDesignSystemWindow>("UI Design System");
         }
 
+        private void OnEnable()
+        {
+            _designSystem = LoogaDesignSystemConsolidator.FindLoadedDesignSystem();
+        }
+
         private void OnGUI()
         {
             DrawAdoption();
+            EditorGUILayout.Space(10f);
+            DrawStyleLibrary();
             EditorGUILayout.Space(10f);
 
             EditorGUILayout.LabelField("Open Scene Audit", EditorStyles.boldLabel);
@@ -120,7 +131,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 _adoptionSummary =
                     $"Created {result.AssetPath}\n" +
                     $"Controls: {result.Controls}  Elements: {result.Elements}  " +
-                    $"Standalone styles: {result.StandaloneStyles}  Control styles: {result.ControlStyles}\n" +
+                    $"Public styles: {result.PublicStyles}  Captured one-offs: {result.CapturedStyles}  " +
+                    $"Control styles: {result.ControlStyles}\n" +
                     $"Internal control parts: {result.InternalElementStyles}  Colors: {result.Colors}  " +
                     $"Typography: {result.Typography}";
                 ScanOpenScenes();
@@ -130,6 +142,91 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Debug.LogException(exception);
                 _adoptionSummary = $"Adoption failed: {exception.Message}";
             }
+        }
+
+        private void DrawStyleLibrary()
+        {
+            EditorGUILayout.LabelField("Style Library", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Reusable styles belong in the public library. One-off captured styles remain internal " +
+                "and continue to preserve their bound visuals.",
+                MessageType.Info);
+
+            _designSystem = (LoogaDesignSystem)EditorGUILayout.ObjectField(
+                "Design System",
+                _designSystem,
+                typeof(LoogaDesignSystem),
+                false);
+            _reuseThreshold = Mathf.Max(2, EditorGUILayout.IntField("Reusable At", _reuseThreshold));
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Analyze Loaded UI"))
+                {
+                    AnalyzeStyleLibrary();
+                }
+
+                using (new EditorGUI.DisabledScope(_designSystem == null))
+                {
+                    if (GUILayout.Button("Consolidate Public Styles"))
+                    {
+                        ConsolidateStyleLibrary();
+                    }
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(_designSystem == null || Selection.gameObjects.Length == 0))
+            {
+                if (GUILayout.Button("Promote Styles On Selected Objects"))
+                {
+                    LoogaDesignSystemConsolidator.PromoteSelection(_designSystem);
+                    AnalyzeStyleLibrary();
+                }
+            }
+
+            _mergeTarget = (LoogaElementStyle)EditorGUILayout.ObjectField(
+                "Merge Into",
+                _mergeTarget,
+                typeof(LoogaElementStyle),
+                false);
+            using (new EditorGUI.DisabledScope(_mergeTarget == null || Selection.gameObjects.Length == 0))
+            {
+                if (GUILayout.Button("Merge Selected Bindings"))
+                {
+                    LoogaDesignSystemConsolidator.MergeSelectionInto(_mergeTarget);
+                    AnalyzeStyleLibrary();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_librarySummary))
+            {
+                EditorGUILayout.HelpBox(_librarySummary, MessageType.None);
+            }
+        }
+
+        private void AnalyzeStyleLibrary()
+        {
+            _designSystem ??= LoogaDesignSystemConsolidator.FindLoadedDesignSystem();
+            if (_designSystem == null)
+            {
+                _librarySummary = "No design system is assigned to a loaded theme scope.";
+                return;
+            }
+
+            LoogaDesignSystemConsolidator.Report report =
+                LoogaDesignSystemConsolidator.Analyze(_designSystem, _reuseThreshold);
+            _librarySummary =
+                $"Bound styles: {report.BoundStyles}  Public: {report.PublicStyles}  " +
+                $"Captured: {report.CapturedStyles}  Reusable captured: {report.ReusableCapturedStyles}";
+        }
+
+        private void ConsolidateStyleLibrary()
+        {
+            LoogaDesignSystemConsolidator.Report report =
+                LoogaDesignSystemConsolidator.Consolidate(_designSystem, _reuseThreshold);
+            _librarySummary =
+                $"Public library consolidated to {report.PublicStyles} style(s). " +
+                $"{report.CapturedStyles} one-off style(s) remain internal and bound.";
         }
 
         private void ScanOpenScenes()
