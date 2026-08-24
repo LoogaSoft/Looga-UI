@@ -48,6 +48,11 @@ in place from their component context menu or with `GameObject > LoogaSoft > UI 
 Conversion preserves the component identity, references, events, values, and navigation settings. Converted
 controls start in Local mode so adopting Looga UI does not silently change their appearance.
 
+To migrate an authored UI scene at once, load the scene and use
+`LoogaSoft > UI > Controls > Convert Loaded Scene Controls`. The command scans every loaded scene, includes
+inactive objects, previews the number of each control type, and converts the batch as one Undo operation. It
+does not modify prefab assets or guess semantic styles.
+
 Changing a theme, token, or element style reapplies affected bindings in Edit Mode and at runtime.
 Nested scopes can replace the active theme for a menu, faction, event, or accessibility context.
 Use `LoogaSoft > UI > Design System` to find unbound UI in loaded scenes, add bindings to selected objects,

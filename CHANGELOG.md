@@ -4,6 +4,12 @@
 
 - Consolidated menu and design-system R3 adapters behind one Package Support integration.
 
+## 2.2.1 - 2026-08-24
+
+- Added a one-click loaded-scene migration for every supported Unity UI control, including inactive objects.
+- Added conversion previews, one-step Undo, progress reporting, and cached script lookups.
+- Preserved authored visuals by placing converted controls in Local style mode.
+
 ## 2.2.0 - 2026-08-23
 
 - Added `LoogaToggle`, `LoogaSlider`, `LoogaScrollbar`, `LoogaInputField`, and `LoogaDropdown` as full Unity-compatible replacement controls.

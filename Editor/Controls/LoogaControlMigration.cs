@@ -5,6 +5,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Extensions.Editor.Controls
@@ -13,6 +14,9 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
     public static class LoogaControlMigration
     {
         private const string SelectionMenuPath = "GameObject/LoogaSoft/UI/Convert Selected Controls";
+        private const string LoadedScenesMenuPath = "LoogaSoft/UI/Controls/Convert Loaded Scene Controls";
+
+        private static readonly Dictionary<Type, MonoScript> ScriptCache = new Dictionary<Type, MonoScript>();
 
         [MenuItem("CONTEXT/Button/Convert To Looga Button", true)]
         private static bool ValidateButton(MenuCommand command) => command.context is Button and not LoogaButton;
@@ -59,20 +63,153 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
                 controls.UnionWith(selectedObject.GetComponentsInChildren<Selectable>(true));
             }
 
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            int undoGroup = BeginUndoGroup("Convert Selected UI Controls");
             foreach (Selectable control in controls)
             {
                 Type targetType = GetTargetType(control);
                 if (targetType != null)
                 {
-                    Convert(control, targetType);
+                    Convert(control, targetType, false);
                 }
             }
+
+            Undo.CollapseUndoOperations(undoGroup);
+            Selection.activeObject = previousSelection;
+        }
+
+        [MenuItem(LoadedScenesMenuPath, false, 110)]
+        private static void ConvertLoadedScenes()
+        {
+            List<Selectable> controls = FindLoadedSceneControls();
+            if (controls.Count == 0)
+            {
+                EditorUtility.DisplayDialog(
+                    "Convert Loaded Scene Controls",
+                    "The loaded scenes contain no Unity controls that need conversion.",
+                    "OK");
+                return;
+            }
+
+            string summary = BuildSummary(controls);
+            bool confirmed = EditorUtility.DisplayDialog(
+                "Convert Loaded Scene Controls",
+                $"Convert {controls.Count} control(s) in every loaded scene?\n\n{summary}\n\n" +
+                "Inactive objects are included. Existing appearance is preserved in Local style mode. " +
+                "The entire pass can be undone as one operation.",
+                "Convert All",
+                "Cancel");
+            if (!confirmed)
+            {
+                return;
+            }
+
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            int undoGroup = BeginUndoGroup("Convert Loaded Scene UI Controls");
+            int convertedCount = 0;
+
+            try
+            {
+                for (int index = 0; index < controls.Count; index++)
+                {
+                    Selectable control = controls[index];
+                    EditorUtility.DisplayProgressBar(
+                        "Converting UI Controls",
+                        control != null ? control.name : "Control",
+                        (index + 1f) / controls.Count);
+
+                    Type targetType = GetTargetType(control);
+                    if (targetType != null && Convert(control, targetType, false))
+                    {
+                        convertedCount++;
+                    }
+                }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+                Undo.CollapseUndoOperations(undoGroup);
+                Selection.activeObject = previousSelection;
+            }
+
+            string result = $"Converted {convertedCount} of {controls.Count} loaded-scene UI controls.";
+            Debug.Log($"Looga UI: {result} Existing appearance remains in Local style mode.");
+            EditorUtility.DisplayDialog("UI Control Conversion Complete", result, "OK");
         }
 
         private static bool HasConvertibleControl(GameObject gameObject)
         {
             Selectable[] controls = gameObject.GetComponentsInChildren<Selectable>(true);
             return Array.Exists(controls, control => GetTargetType(control) != null);
+        }
+
+        private static List<Selectable> FindLoadedSceneControls()
+        {
+            List<Selectable> controls = new List<Selectable>();
+            for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++)
+            {
+                Scene scene = SceneManager.GetSceneAt(sceneIndex);
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    continue;
+                }
+
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    Selectable[] sceneControls = root.GetComponentsInChildren<Selectable>(true);
+                    foreach (Selectable control in sceneControls)
+                    {
+                        if (GetTargetType(control) != null)
+                        {
+                            controls.Add(control);
+                        }
+                    }
+                }
+            }
+
+            return controls;
+        }
+
+        private static string BuildSummary(IReadOnlyList<Selectable> controls)
+        {
+            int buttons = 0;
+            int toggles = 0;
+            int sliders = 0;
+            int scrollbars = 0;
+            int inputs = 0;
+            int dropdowns = 0;
+
+            foreach (Selectable control in controls)
+            {
+                switch (control)
+                {
+                    case Button:
+                        buttons++;
+                        break;
+                    case Toggle:
+                        toggles++;
+                        break;
+                    case Slider:
+                        sliders++;
+                        break;
+                    case Scrollbar:
+                        scrollbars++;
+                        break;
+                    case TMP_InputField:
+                        inputs++;
+                        break;
+                    case TMP_Dropdown:
+                        dropdowns++;
+                        break;
+                }
+            }
+
+            return $"Buttons: {buttons}\n" +
+                   $"Toggles: {toggles}\n" +
+                   $"Sliders: {sliders}\n" +
+                   $"Scrollbars: {scrollbars}\n" +
+                   $"Input fields: {inputs}\n" +
+                   $"Dropdowns: {dropdowns}";
         }
 
         private static Type GetTargetType(Selectable control)
@@ -90,18 +227,18 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             };
         }
 
-        private static void Convert(Selectable control, Type targetType)
+        private static bool Convert(Selectable control, Type targetType, bool selectResult = true)
         {
             if (control == null || targetType == null)
             {
-                return;
+                return false;
             }
 
-            MonoScript script = FindScript(targetType);
+            MonoScript script = GetScript(targetType);
             if (script == null)
             {
                 Debug.LogError($"Looga UI could not locate the {targetType.Name} script.", control);
-                return;
+                return false;
             }
 
             GameObject owner = control.gameObject;
@@ -114,11 +251,16 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             if (converted == null)
             {
                 Debug.LogError($"Looga UI could not convert {owner.name} to {targetType.Name}.", owner);
-                return;
+                return false;
             }
 
             SerializedObject serializedConverted = new SerializedObject(converted);
-            serializedConverted.FindProperty("_styleSource").enumValueIndex = (int)LoogaControlStyleSource.Local;
+            SerializedProperty styleSource = serializedConverted.FindProperty("_styleSource");
+            if (styleSource != null)
+            {
+                styleSource.enumValueIndex = (int)LoogaControlStyleSource.Local;
+            }
+
             serializedConverted.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.RecordPrefabInstancePropertyModifications(converted);
             EditorUtility.SetDirty(converted);
@@ -128,7 +270,31 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
                 EditorSceneManager.MarkSceneDirty(owner.scene);
             }
 
-            Selection.activeObject = converted;
+            if (selectResult)
+            {
+                Selection.activeObject = converted;
+            }
+
+            return true;
+        }
+
+        private static int BeginUndoGroup(string name)
+        {
+            Undo.IncrementCurrentGroup();
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName(name);
+            return undoGroup;
+        }
+
+        private static MonoScript GetScript(Type targetType)
+        {
+            if (!ScriptCache.TryGetValue(targetType, out MonoScript script) || script == null)
+            {
+                script = FindScript(targetType);
+                ScriptCache[targetType] = script;
+            }
+
+            return script;
         }
 
         private static MonoScript FindScript(Type targetType)
