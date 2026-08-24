@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using LoogaSoft.UI.Controls;
 using LoogaSoft.UI.Design;
 using TMPro;
@@ -15,6 +16,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private LoogaElementStyle _mergeTarget;
         private int _reuseThreshold = 2;
         private string _librarySummary;
+        private string _qualitySummary;
         private string _adoptionOutputFolder = LoogaDesignSystemAdopter.DefaultOutputFolder;
         private string _adoptionSummary;
         private Vector2 _scrollPosition;
@@ -35,6 +37,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             DrawAdoption();
             EditorGUILayout.Space(10f);
             DrawStyleLibrary();
+            EditorGUILayout.Space(10f);
+            DrawDesignQuality();
             EditorGUILayout.Space(10f);
 
             EditorGUILayout.LabelField("Open Scene Audit", EditorStyles.boldLabel);
@@ -161,7 +165,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Analyze Loaded UI"))
+                if (GUILayout.Button("Analyze Style Usage"))
                 {
                     AnalyzeStyleLibrary();
                 }
@@ -202,6 +206,55 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             {
                 EditorGUILayout.HelpBox(_librarySummary, MessageType.None);
             }
+        }
+
+        private void DrawDesignQuality()
+        {
+            EditorGUILayout.LabelField("Design Quality", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Measure typography drift, generated style names, repeated decoration, and serialized runtime clones. " +
+                "The audit does not change scene objects or design assets.",
+                MessageType.Info);
+
+            using (new EditorGUI.DisabledScope(_designSystem == null))
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Analyze Design Quality"))
+                {
+                    LoogaDesignSystemAuditor.Report report =
+                        LoogaDesignSystemAuditor.Analyze(_designSystem);
+                    _qualitySummary = report.ToSummary();
+                }
+
+                if (GUILayout.Button("Save Markdown Report"))
+                {
+                    SaveDesignQualityReport();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_qualitySummary))
+            {
+                EditorGUILayout.HelpBox(_qualitySummary, MessageType.None);
+            }
+        }
+
+        private void SaveDesignQualityReport()
+        {
+            string path = EditorUtility.SaveFilePanelInProject(
+                "Save UI Design Audit",
+                "UI Design Audit",
+                "md",
+                "Choose where to save the loaded-scene audit.");
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            LoogaDesignSystemAuditor.Report report =
+                LoogaDesignSystemAuditor.Analyze(_designSystem);
+            File.WriteAllText(path, report.ToMarkdown("UI Design Audit"));
+            AssetDatabase.ImportAsset(path);
+            _qualitySummary = report.ToSummary();
         }
 
         private void AnalyzeStyleLibrary()
