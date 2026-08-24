@@ -64,7 +64,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             }
 
             UnityEngine.Object previousSelection = Selection.activeObject;
-            int undoGroup = BeginUndoGroup("Convert Selected UI Controls");
             foreach (Selectable control in controls)
             {
                 Type targetType = GetTargetType(control);
@@ -74,7 +73,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
                 }
             }
 
-            Undo.CollapseUndoOperations(undoGroup);
             Selection.activeObject = previousSelection;
         }
 
@@ -96,7 +94,7 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
                 "Convert Loaded Scene Controls",
                 $"Convert {controls.Count} control(s) in every loaded scene?\n\n{summary}\n\n" +
                 "Inactive objects are included. Existing appearance is preserved in Local style mode. " +
-                "The entire pass can be undone as one operation.",
+                "Unity cannot undo component script-type conversions. Save or commit the scenes before continuing.",
                 "Convert All",
                 "Cancel");
             if (!confirmed)
@@ -105,7 +103,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             }
 
             UnityEngine.Object previousSelection = Selection.activeObject;
-            int undoGroup = BeginUndoGroup("Convert Loaded Scene UI Controls");
             int convertedCount = 0;
 
             try
@@ -128,7 +125,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             finally
             {
                 EditorUtility.ClearProgressBar();
-                Undo.CollapseUndoOperations(undoGroup);
                 Selection.activeObject = previousSelection;
             }
 
@@ -242,7 +238,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             }
 
             GameObject owner = control.gameObject;
-            Undo.RecordObject(control, $"Convert To {targetType.Name}");
             SerializedObject serializedControl = new SerializedObject(control);
             serializedControl.FindProperty("m_Script").objectReferenceValue = script;
             serializedControl.ApplyModifiedPropertiesWithoutUndo();
@@ -276,14 +271,6 @@ namespace LoogaSoft.UI.Extensions.Editor.Controls
             }
 
             return true;
-        }
-
-        private static int BeginUndoGroup(string name)
-        {
-            Undo.IncrementCurrentGroup();
-            int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName(name);
-            return undoGroup;
         }
 
         private static MonoScript GetScript(Type targetType)
