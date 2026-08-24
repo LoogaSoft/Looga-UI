@@ -11,6 +11,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     public sealed class LoogaDesignSystemWindow : EditorWindow
     {
         private readonly List<GameObject> _unboundObjects = new List<GameObject>();
+        private string _adoptionOutputFolder = LoogaDesignSystemAdopter.DefaultOutputFolder;
+        private string _adoptionSummary;
         private Vector2 _scrollPosition;
 
         [MenuItem("LoogaSoft/UI/Design System")]
@@ -21,6 +23,9 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         private void OnGUI()
         {
+            DrawAdoption();
+            EditorGUILayout.Space(10f);
+
             EditorGUILayout.LabelField("Open Scene Audit", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "The audit finds loaded UGUI and TextMeshPro objects without a style binding.",
@@ -68,6 +73,61 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawAdoption()
+        {
+            EditorGUILayout.LabelField("Adopt Authored UI", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Create one reusable design system from the visuals in all loaded scenes. " +
+                "Matching controls share styles, current visuals stay unchanged, and root canvases receive theme scopes.",
+                MessageType.Info);
+
+            _adoptionOutputFolder = EditorGUILayout.TextField("Output Folder", _adoptionOutputFolder);
+
+            using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+            {
+                if (GUILayout.Button("Create Design System From Loaded UI", GUILayout.Height(28f)))
+                {
+                    AdoptLoadedUi();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_adoptionSummary))
+            {
+                EditorGUILayout.HelpBox(_adoptionSummary, MessageType.None);
+            }
+        }
+
+        private void AdoptLoadedUi()
+        {
+            bool confirmed = EditorUtility.DisplayDialog(
+                "Adopt Authored UI",
+                "This creates design-system assets and assigns them to UI in every loaded scene. " +
+                "The current appearance is captured before assignments are changed.",
+                "Adopt UI",
+                "Cancel");
+            if (!confirmed)
+            {
+                return;
+            }
+
+            try
+            {
+                LoogaDesignSystemAdopter.AdoptionResult result =
+                    LoogaDesignSystemAdopter.AdoptLoadedScenes(_adoptionOutputFolder);
+                _adoptionSummary =
+                    $"Created {result.AssetPath}\n" +
+                    $"Controls: {result.Controls}  Elements: {result.Elements}  " +
+                    $"Control styles: {result.ControlStyles}  Colors: {result.Colors}  " +
+                    $"Typography: {result.Typography}";
+                ScanOpenScenes();
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+                _adoptionSummary = $"Adoption failed: {exception.Message}";
+            }
         }
 
         private void ScanOpenScenes()

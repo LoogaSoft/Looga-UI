@@ -34,12 +34,22 @@ Its core uses normal C# events and Unity lifecycle callbacks. It does not poll a
 
 ### Recommended Setup
 
-1. Create semantic color and typography tokens under `Create > LoogaSoft > UI > Design System`.
-2. Create one theme and assign values for those tokens.
-3. Create one design-system asset and assign its default theme.
-4. Add `LoogaThemeScope` to the Canvas or another stable UI root.
-5. Create element styles such as Primary Button, Panel Surface, Heading, and Currency Value.
-6. Add `LoogaStyleBinding` to authored UI objects and assign the relevant element style.
+For an existing authored UI, load its scenes and open `LoogaSoft > UI > Design System`. Select
+**Create Design System From Loaded UI**. Looga UI then:
+
+1. Captures the current appearance without changing it.
+2. Groups exact visual matches into shared element and control styles.
+3. Creates reusable color and typography tokens.
+4. Creates one default theme and design-system asset.
+5. Adds a theme scope to each root Canvas.
+6. Assigns the generated styles to controls and remaining visual elements.
+
+The generated assets live under `Assets/Project/Databases/UI/Design System` by default. Rename the generated
+roles and deliberately merge styles that have the same semantic purpose after verifying the result.
+
+For a new UI without authored visuals, create tokens, a theme, element styles, and typed control styles under
+`Create > LoogaSoft > UI > Design System`. Add `LoogaThemeScope` to the stable UI root, then assign styles as
+the interface is authored.
 
 Use the Looga control components when a control needs one clear appearance owner. In **Design System** mode,
 the assigned typed style controls appearance and the inspector hides local transition settings. In **Local**
@@ -58,8 +68,6 @@ The converter retains component identity so serialized references and UnityEvent
 
 Changing a theme, token, or element style reapplies affected bindings in Edit Mode and at runtime.
 Nested scopes can replace the active theme for a menu, faction, event, or accessibility context.
-Use `LoogaSoft > UI > Design System` to find unbound UI in loaded scenes, add bindings to selected objects,
-and reapply all loaded bindings. The audit never assigns semantic styles automatically.
 
 ### Optional R3 Support
 

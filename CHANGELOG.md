@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## 2.3.0 - 2026-08-24
+
 - Consolidated menu and design-system R3 adapters behind one Package Support integration.
+- Added loaded-scene design-system adoption for existing authored UI.
+- Added exact visual matching so identical controls and elements share generated styles without changing appearance.
+- Added generated color and typography tokens, typed control styles, a default theme, and root-canvas theme scopes.
+- Stored the generated theme, tokens, and styles as sub-assets of one project design-system asset.
 
 ## 2.2.2 - 2026-08-24
 
