@@ -28,7 +28,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
             EditorGUILayout.LabelField("Open Scene Audit", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "The audit finds loaded UGUI and TextMeshPro objects without a style binding.",
+                "The audit finds loaded UGUI and TextMeshPro objects without a style owner. " +
+                "Labels, icons, fills, and handles owned by typed Looga controls are covered automatically.",
                 MessageType.Info);
 
             using (new EditorGUILayout.HorizontalScope())
@@ -119,7 +120,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 _adoptionSummary =
                     $"Created {result.AssetPath}\n" +
                     $"Controls: {result.Controls}  Elements: {result.Elements}  " +
-                    $"Control styles: {result.ControlStyles}  Colors: {result.Colors}  " +
+                    $"Standalone styles: {result.StandaloneStyles}  Control styles: {result.ControlStyles}\n" +
+                    $"Internal control parts: {result.InternalElementStyles}  Colors: {result.Colors}  " +
                     $"Typography: {result.Typography}";
                 ScanOpenScenes();
             }
@@ -134,14 +136,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         {
             _unboundObjects.Clear();
             HashSet<GameObject> candidates = new HashSet<GameObject>();
+            HashSet<GameObject> controlOwnedObjects = new HashSet<GameObject>();
 
             AddCandidates(Object.FindObjectsByType<Graphic>(FindObjectsInactive.Include, FindObjectsSortMode.None), candidates);
             AddCandidates(Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None), candidates);
             AddCandidates(Object.FindObjectsByType<Selectable>(FindObjectsInactive.Include, FindObjectsSortMode.None), candidates);
+            LoogaStyledVisualCoverage.Collect(controlOwnedObjects);
 
             foreach (GameObject candidate in candidates)
             {
-                if (!HasStyleOwner(candidate))
+                if (!controlOwnedObjects.Contains(candidate) && !HasStyleOwner(candidate))
                 {
                     _unboundObjects.Add(candidate);
                 }
@@ -191,11 +195,14 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private void AddBindingsToSelection()
         {
             GameObject[] selectedObjects = Selection.gameObjects;
+            HashSet<GameObject> controlOwnedObjects = new HashSet<GameObject>();
+            LoogaStyledVisualCoverage.Collect(controlOwnedObjects);
 
             for (int i = 0; i < selectedObjects.Length; i++)
             {
                 GameObject selectedObject = selectedObjects[i];
-                if (!IsStyleable(selectedObject) || HasStyleOwner(selectedObject))
+                if (!IsStyleable(selectedObject) || controlOwnedObjects.Contains(selectedObject) ||
+                    HasStyleOwner(selectedObject))
                 {
                     continue;
                 }

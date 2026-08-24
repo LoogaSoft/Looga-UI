@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2.3.1 - 2026-08-24
+
+- Excluded typed-control internals from the standalone element-style collection.
+- Fixed scene audits that reported labels, icons, fills, and handles owned by styled controls as unbound.
+- Made repeated UI adoption refresh existing style bindings instead of skipping them.
+- Clarified adoption results by separating standalone, control, and internal-part style counts.
+
 ## 2.3.0 - 2026-08-24
 
 - Consolidated menu and design-system R3 adapters behind one Package Support integration.

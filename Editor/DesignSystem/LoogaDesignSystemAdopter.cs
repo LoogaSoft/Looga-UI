@@ -37,6 +37,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             new Dictionary<string, LoogaInputFieldStyle>();
         private static readonly Dictionary<string, LoogaDropdownStyle> DropdownStyles =
             new Dictionary<string, LoogaDropdownStyle>();
+        private static readonly HashSet<LoogaElementStyle> StandaloneElementStyles =
+            new HashSet<LoogaElementStyle>();
         private static readonly HashSet<Component> OwnedVisuals = new HashSet<Component>();
 
         private static LoogaDesignSystem _designSystem;
@@ -83,6 +85,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 _adoptedElements,
                 ColorTokens.Count,
                 TypographyTokens.Count,
+                StandaloneElementStyles.Count,
+                ElementStyles.Count - StandaloneElementStyles.Count,
                 ButtonStyles.Count + ToggleStyles.Count + SliderStyles.Count +
                 ScrollbarStyles.Count + InputFieldStyles.Count + DropdownStyles.Count);
         }
@@ -256,7 +260,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Graphic graphic = candidate.GetComponent<Graphic>();
                 TMP_Text text = candidate.GetComponent<TMP_Text>();
                 Selectable selectable = candidate.GetComponent<Selectable>();
-                if (IsOwned(graphic, text, selectable) || candidate.TryGetComponent(out LoogaStyleBinding _))
+                if (IsOwned(graphic, text, selectable))
                 {
                     continue;
                 }
@@ -267,7 +271,17 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                     continue;
                 }
 
-                LoogaStyleBinding binding = Undo.AddComponent<LoogaStyleBinding>(candidate);
+                StandaloneElementStyles.Add(style);
+                LoogaStyleBinding binding = candidate.GetComponent<LoogaStyleBinding>();
+                if (binding == null)
+                {
+                    binding = Undo.AddComponent<LoogaStyleBinding>(candidate);
+                }
+                else
+                {
+                    Undo.RecordObject(binding, "Adopt Element Style");
+                }
+
                 binding.SetStyle(style);
                 EditorUtility.SetDirty(binding);
                 _adoptedElements++;
@@ -398,7 +412,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private static void RegisterStyles()
         {
             SerializedObject serializedSystem = new SerializedObject(_designSystem);
-            SetArray(serializedSystem, "_styles", ElementStyles.Values);
+            SetArray(serializedSystem, "_styles", StandaloneElementStyles);
             SetArray(serializedSystem, "_buttonStyles", ButtonStyles.Values);
             SetArray(serializedSystem, "_toggleStyles", ToggleStyles.Values);
             SetArray(serializedSystem, "_sliderStyles", SliderStyles.Values);
@@ -802,6 +816,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             ScrollbarStyles.Clear();
             InputFieldStyles.Clear();
             DropdownStyles.Clear();
+            StandaloneElementStyles.Clear();
             OwnedVisuals.Clear();
             _designSystem = null;
             _theme = null;
@@ -818,6 +833,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 int elements,
                 int colors,
                 int typography,
+                int standaloneStyles,
+                int internalElementStyles,
                 int controlStyles)
             {
                 AssetPath = assetPath;
@@ -825,6 +842,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Elements = elements;
                 Colors = colors;
                 Typography = typography;
+                StandaloneStyles = standaloneStyles;
+                InternalElementStyles = internalElementStyles;
                 ControlStyles = controlStyles;
             }
 
@@ -833,6 +852,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             internal int Elements { get; }
             internal int Colors { get; }
             internal int Typography { get; }
+            internal int StandaloneStyles { get; }
+            internal int InternalElementStyles { get; }
             internal int ControlStyles { get; }
         }
     }
