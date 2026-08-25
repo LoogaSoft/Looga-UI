@@ -1,13 +1,56 @@
 using System;
 using LoogaSoft.Inspector.Editor;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace LoogaSoft.Menu.Editor
 {
     [CustomEditor(typeof(LoogaMenuStructureProfile))]
     public sealed class LoogaMenuStructureProfileEditor : LoogaEditor
     {
+        public override VisualElement CreateInspectorGUI()
+        {
+            VisualElement root = LoogaUiToolkitStyle.CreateInspectorRoot();
+            PropertyField regions = LoogaUiToolkitStyle.CreatePropertyField(
+                serializedObject,
+                "_regions",
+                "Regions");
+            if (regions != null)
+                root.Add(regions);
+
+            Button addPanel = new(() => CreateRegionRetained<LoogaMenuPanelRegionContent>(
+                root,
+                "Shared Panel"))
+            {
+                text = "Add Panel Slot"
+            };
+            Button addNavigation = new(() =>
+                CreateRegionRetained<LoogaMenuNavigationRegionContent>(root, "Navigation"))
+            {
+                text = "Add Navigation Slot"
+            };
+            Button addActions = new(() => CreateRegionRetained<LoogaMenuActionRegionContent>(
+                root,
+                "Actions"))
+            {
+                text = "Add Action Slot"
+            };
+            root.Add(LoogaUiToolkitStyle.CreateButtonRow(addPanel, addNavigation, addActions));
+            root.Bind(serializedObject);
+            return root;
+        }
+
+        private void CreateRegionRetained<T>(VisualElement root, string baseName)
+            where T : LoogaMenuRegionContent
+        {
+            serializedObject.UpdateIfRequiredOrScript();
+            CreateRegion<T>(serializedObject.FindProperty("_regions"), baseName);
+            root.Clear();
+            root.Add(CreateInspectorGUI());
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -109,7 +152,6 @@ namespace LoogaSoft.Menu.Editor
             serializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssets();
-            GUIUtility.ExitGUI();
         }
 
         private static void RemoveRegion(

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using LoogaSoft.Inspector.Editor;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 using UnityEngine;
 
 namespace LoogaSoft.Menu.Editor
@@ -13,6 +15,7 @@ namespace LoogaSoft.Menu.Editor
 
         private Vector2 _scroll;
         private int _selectedTab;
+        private ScrollView _retainedContent;
 
         [MenuItem("LoogaSoft/UI/Menus/Menu Project", priority = 23)]
         private static void Open()
@@ -20,7 +23,165 @@ namespace LoogaSoft.Menu.Editor
             GetWindow<LoogaMenuProjectWindow>("Menu Project");
         }
 
-        private void OnGUI()
+        private void OnEnable()
+        {
+            EditorApplication.projectChanged += RebuildRetainedContent;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.projectChanged -= RebuildRetainedContent;
+        }
+
+        public void CreateGUI()
+        {
+            VisualElement root = rootVisualElement;
+            root.Clear();
+            root.style.flexDirection = FlexDirection.Column;
+            root.Add(LoogaUiToolkitStyle.CreateTabBar(
+                Tabs,
+                _selectedTab,
+                index =>
+                {
+                    _selectedTab = index;
+                    RebuildRetainedContent();
+                }));
+
+            _retainedContent = new ScrollView(ScrollViewMode.Vertical);
+            _retainedContent.style.flexGrow = 1f;
+            root.Add(_retainedContent);
+            RebuildRetainedContent();
+        }
+
+        private void RebuildRetainedContent()
+        {
+            if (_retainedContent == null)
+                return;
+
+            _retainedContent.Clear();
+            VisualElement root = LoogaUiToolkitStyle.CreateInspectorRoot();
+            _retainedContent.Add(root);
+            switch (_selectedTab)
+            {
+                case 1:
+                    BuildAssetList<LoogaMenuPanelDefinition>(root, "Panel", CreatePanel);
+                    break;
+                case 2:
+                    BuildSharedUi(root);
+                    break;
+                case 3:
+                    BuildAdvanced(root);
+                    break;
+                default:
+                    BuildAssetList<LoogaMenuScreenDefinition>(root, "Screen", CreateScreen);
+                    break;
+            }
+        }
+
+        private static void BuildAssetList<T>(
+            VisualElement parent,
+            string label,
+            Action create)
+            where T : UnityEngine.Object
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection($"{label}s");
+            Button createButton = new(create) { text = $"Create {label}" };
+            section.Add(createButton);
+
+            List<T> assets = FindAssets<T>();
+            if (assets.Count == 0)
+            {
+                section.Add(new HelpBox(
+                    $"No {label.ToLowerInvariant()} assets exist yet.",
+                    HelpBoxMessageType.Info));
+            }
+            else
+            {
+                foreach (T asset in assets)
+                    section.Add(CreateAssetRow(asset));
+            }
+
+            parent.Add(section);
+        }
+
+        private static void BuildSharedUi(VisualElement parent)
+        {
+            LoogaMenuStructureProfile project = LoogaMenuStructureEditorUtility.FindStructure();
+            VisualElement section = LoogaUiToolkitStyle.CreateSection("Shared UI Slots");
+            Action commandAction = project == null
+                ? CreateMenuProject
+                : () => Select(project);
+            Button command = new(commandAction)
+            {
+                text = project == null ? "Create Menu Project" : "Edit Slots"
+            };
+            section.Add(command);
+
+            if (project == null)
+            {
+                section.Add(new HelpBox(
+                    "Create one Menu Project. It owns shared slots such as Header, Navigation, Actions, and Background.",
+                    HelpBoxMessageType.Info));
+                parent.Add(section);
+                return;
+            }
+
+            section.Add(CreateAssetRow(project));
+            foreach (LoogaMenuRegionDefinition slot in project.Regions)
+            {
+                if (slot == null)
+                    continue;
+
+                VisualElement card = LoogaUiToolkitStyle.CreateCard();
+                card.style.flexDirection = FlexDirection.Row;
+                Label name = new(slot.DisplayName);
+                name.style.flexGrow = 1f;
+                card.Add(name);
+                card.Add(new Label(GetSlotTypeName(slot)));
+                section.Add(card);
+            }
+
+            parent.Add(section);
+        }
+
+        private static void BuildAdvanced(VisualElement parent)
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection(
+                "Advanced",
+                "Contexts and input policies are optional. Start with screens, layouts, panels, and shared UI slots.");
+            AddAssetGroup<LoogaMenuContextDefinition>(section, "Contexts");
+            AddAssetGroup<LoogaMenuInputPolicy>(section, "Input Policies");
+            AddAssetGroup<LoogaMenuRuleSet>(section, "Rule Sets");
+            parent.Add(section);
+        }
+
+        private static void AddAssetGroup<T>(VisualElement parent, string label)
+            where T : UnityEngine.Object
+        {
+            List<T> assets = FindAssets<T>();
+            Label heading = new($"{label} ({assets.Count})");
+            heading.style.unityFontStyleAndWeight = FontStyle.Bold;
+            heading.style.marginTop = 8f;
+            parent.Add(heading);
+            foreach (T asset in assets)
+                parent.Add(CreateAssetRow(asset));
+        }
+
+        private static VisualElement CreateAssetRow(UnityEngine.Object asset)
+        {
+            VisualElement card = LoogaUiToolkitStyle.CreateCard();
+            card.style.flexDirection = FlexDirection.Row;
+            Label name = new(asset != null ? asset.name : "Missing Asset");
+            name.style.flexGrow = 1f;
+            card.Add(name);
+
+            Button select = new(() => Select(asset)) { text = "Select" };
+            select.SetEnabled(asset != null);
+            card.Add(select);
+            return card;
+        }
+
+        private void DrawLegacyGui()
         {
             _selectedTab = LoogaGUILayout.Tabs(
                 _selectedTab,

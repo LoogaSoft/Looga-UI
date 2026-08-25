@@ -62,6 +62,7 @@ namespace LoogaSoft.Menu.Editor
 
             VisualElement root = rootVisualElement;
             root.Clear();
+            LoogaUiToolkitStyle.AddSharedStyleSheet(root);
             root.style.flexDirection = FlexDirection.Column;
 
             Toolbar commandBar = new();
@@ -123,6 +124,7 @@ namespace LoogaSoft.Menu.Editor
 
         private void RefreshVisualState()
         {
+            using var _ = LoogaUiToolkitStyle.MenuPreviewRefresh.Auto();
             if (_screenList == null)
                 return;
 

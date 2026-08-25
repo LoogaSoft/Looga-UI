@@ -1,7 +1,9 @@
 using System;
 using LoogaSoft.Inspector.Editor;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace LoogaSoft.Menu.Editor
 {
@@ -11,6 +13,50 @@ namespace LoogaSoft.Menu.Editor
         private static readonly string[] InspectorTabs = { "Layout", "Shared UI" };
 
         private int _selectedTab;
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            VisualElement root = LoogaUiToolkitStyle.CreateInspectorRoot();
+            VisualElement content = new();
+            root.Add(LoogaUiToolkitStyle.CreateTabBar(
+                InspectorTabs,
+                _selectedTab,
+                index =>
+                {
+                    _selectedTab = index;
+                    BuildRetainedTab(content);
+                }));
+            root.Add(content);
+            BuildRetainedTab(content);
+            root.Bind(serializedObject);
+            return root;
+        }
+
+        private void BuildRetainedTab(VisualElement content)
+        {
+            content.Clear();
+            content.style.marginTop = 6f;
+            if (_selectedTab == 1)
+            {
+                AddProperty(content, "_regionOverrides", "Region Overrides");
+                return;
+            }
+
+            AddProperty(content, "_description");
+            AddProperty(content, "_panels");
+            AddProperty(content, "_includeInNavigation");
+            AddProperty(content, "_navigationRequirements");
+        }
+
+        private void AddProperty(VisualElement parent, string propertyName, string label = null)
+        {
+            PropertyField field = LoogaUiToolkitStyle.CreatePropertyField(
+                serializedObject,
+                propertyName,
+                label);
+            if (field != null)
+                parent.Add(field);
+        }
 
         public override void OnInspectorGUI()
         {

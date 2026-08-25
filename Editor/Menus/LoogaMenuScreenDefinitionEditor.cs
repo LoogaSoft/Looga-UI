@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using LoogaSoft.Inspector.Editor;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace LoogaSoft.Menu.Editor
 {
@@ -21,6 +23,193 @@ namespace LoogaSoft.Menu.Editor
         private void OnEnable()
         {
             SelectLayout(((LoogaMenuScreenDefinition)target)?.ResolveLayout(null));
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            VisualElement root = LoogaUiToolkitStyle.CreateInspectorRoot();
+            VisualElement content = new();
+            root.Add(LoogaUiToolkitStyle.CreateTabBar(
+                InspectorTabs,
+                _selectedTab,
+                index =>
+                {
+                    _selectedTab = index;
+                    BuildRetainedTab(content);
+                }));
+            root.Add(content);
+            BuildRetainedTab(content);
+            root.Bind(serializedObject);
+            return root;
+        }
+
+        private void BuildRetainedTab(VisualElement content)
+        {
+            content.Clear();
+            content.style.marginTop = 6f;
+            switch (_selectedTab)
+            {
+                case 1:
+                    BuildRetainedLayouts(content, (LoogaMenuScreenDefinition)target);
+                    break;
+                case 2:
+                    AddProperty(content, "_regionOverrides", "Region Overrides");
+                    break;
+                default:
+                    BuildRetainedSettings(content);
+                    BuildRetainedValidation(content, (LoogaMenuScreenDefinition)target);
+                    break;
+            }
+        }
+
+        private void BuildRetainedSettings(VisualElement content)
+        {
+            AddProperty(content, "_description");
+            Foldout navigation = new() { text = "Navigation", value = _navigationExpanded };
+            LoogaUiToolkitStyle.StyleFoldout(navigation);
+            navigation.RegisterValueChangedCallback(evt => _navigationExpanded = evt.newValue);
+            AddProperty(navigation, "_navigationSlot");
+            AddProperty(navigation, "_includeLayoutsInNavigation");
+            AddProperty(navigation, "_navigationLinks");
+            content.Add(navigation);
+
+            Foldout behavior = new() { text = "Advanced Behavior", value = _behaviorExpanded };
+            LoogaUiToolkitStyle.StyleFoldout(behavior);
+            behavior.RegisterValueChangedCallback(evt => _behaviorExpanded = evt.newValue);
+            AddProperty(behavior, "_rules");
+            AddProperty(behavior, "_inputPolicy");
+            AddProperty(behavior, "_defaultOpenMode");
+            AddProperty(behavior, "_missingPanelBehavior");
+            content.Add(behavior);
+        }
+
+        private void BuildRetainedLayouts(VisualElement content, LoogaMenuScreenDefinition screen)
+        {
+            serializedObject.UpdateIfRequiredOrScript();
+            SerializedProperty layouts = serializedObject.FindProperty("_layouts");
+            SerializedProperty defaultLayout = serializedObject.FindProperty("_defaultLayout");
+            if (_selectedLayout == null || !screen.ContainsLayout(_selectedLayout))
+                SelectLayout(screen.ResolveLayout(null));
+
+            VisualElement section = LoogaUiToolkitStyle.CreateSection("Layouts");
+            content.Add(section);
+            if (layouts.arraySize == 0)
+            {
+                section.Add(new HelpBox(
+                    "Add a layout before opening this screen. A layout owns the screen's panel composition.",
+                    HelpBoxMessageType.Info));
+            }
+
+            for (int i = 0; i < layouts.arraySize; i++)
+            {
+                int index = i;
+                LoogaMenuScreenLayout layout = layouts.GetArrayElementAtIndex(i).objectReferenceValue
+                    as LoogaMenuScreenLayout;
+                VisualElement row = LoogaUiToolkitStyle.CreateCard();
+                row.style.flexDirection = FlexDirection.Row;
+                Button select = new(() =>
+                {
+                    SelectLayout(layout);
+                    BuildRetainedTab(content);
+                }) { text = layout != null ? layout.name : "Missing Layout" };
+                select.tooltip = BuildLayoutSummary(layout);
+                select.style.flexGrow = 1f;
+                row.Add(select);
+
+                bool isDefault = defaultLayout.objectReferenceValue == layout;
+                Button makeDefault = new(() =>
+                {
+                    serializedObject.UpdateIfRequiredOrScript();
+                    serializedObject.FindProperty("_defaultLayout").objectReferenceValue = layout;
+                    serializedObject.ApplyModifiedProperties();
+                    BuildRetainedTab(content);
+                }) { text = isDefault ? "Default" : "Make Default" };
+                makeDefault.SetEnabled(!isDefault && layout != null);
+                row.Add(makeDefault);
+
+                Button duplicate = new(() =>
+                {
+                    serializedObject.UpdateIfRequiredOrScript();
+                    DuplicateLayout(screen, serializedObject.FindProperty("_layouts"), layout);
+                    BuildRetainedTab(content);
+                }) { text = "Duplicate" };
+                duplicate.SetEnabled(layout != null);
+                row.Add(duplicate);
+
+                Button remove = new(() =>
+                {
+                    serializedObject.UpdateIfRequiredOrScript();
+                    RemoveLayout(
+                        serializedObject.FindProperty("_layouts"),
+                        serializedObject.FindProperty("_defaultLayout"),
+                        index,
+                        layout);
+                    BuildRetainedTab(content);
+                }) { text = "-" };
+                remove.tooltip = "Remove this layout.";
+                row.Add(remove);
+                section.Add(row);
+            }
+
+            Button add = new(() =>
+            {
+                serializedObject.UpdateIfRequiredOrScript();
+                CreateLayout(
+                    screen,
+                    serializedObject.FindProperty("_layouts"),
+                    serializedObject.FindProperty("_defaultLayout"));
+                BuildRetainedTab(content);
+            }) { text = "Add Layout" };
+            section.Add(add);
+
+            if (_selectedLayout != null)
+            {
+                Foldout details = new()
+                {
+                    text = $"Layout Details: {_selectedLayout.name}",
+                    value = _selectedLayoutExpanded
+                };
+                LoogaUiToolkitStyle.StyleFoldout(details);
+                details.RegisterValueChangedCallback(evt => _selectedLayoutExpanded = evt.newValue);
+                details.Add(new UnityEditor.UIElements.InspectorElement(_selectedLayout));
+                content.Add(details);
+            }
+        }
+
+        private void AddProperty(VisualElement parent, string propertyName, string label = null)
+        {
+            PropertyField field = LoogaUiToolkitStyle.CreatePropertyField(
+                serializedObject,
+                propertyName,
+                label);
+            if (field != null)
+                parent.Add(field);
+        }
+
+        private static void BuildRetainedValidation(
+            VisualElement content,
+            LoogaMenuScreenDefinition screen)
+        {
+            VisualElement validation = LoogaUiToolkitStyle.CreateSection("Validation");
+            bool hasIssue = false;
+            if ((screen.IncludeLayoutsInNavigation || (screen.NavigationLinks?.Length ?? 0) > 0)
+                && screen.NavigationSlot == null)
+            {
+                validation.Add(new HelpBox(
+                    "Navigation is authored, but no shared navigation slot is assigned.",
+                    HelpBoxMessageType.Warning));
+                hasIssue = true;
+            }
+
+            if (screen.Layouts == null || screen.Layouts.Length == 0)
+            {
+                validation.Add(new HelpBox("The screen has no layout.", HelpBoxMessageType.Error));
+                hasIssue = true;
+            }
+
+            if (!hasIssue)
+                validation.Add(new HelpBox("No obvious screen setup issues found.", HelpBoxMessageType.Info));
+            content.Add(validation);
         }
 
         public override void OnInspectorGUI()
@@ -214,7 +403,6 @@ namespace LoogaSoft.Menu.Editor
             EditorUtility.SetDirty(layout);
             AssetDatabase.SaveAssets();
             SelectLayout(layout);
-            GUIUtility.ExitGUI();
         }
 
         private void DuplicateLayout(
@@ -240,7 +428,6 @@ namespace LoogaSoft.Menu.Editor
             EditorUtility.SetDirty(duplicate);
             AssetDatabase.SaveAssets();
             SelectLayout(duplicate);
-            GUIUtility.ExitGUI();
         }
 
         private void RemoveLayout(
@@ -273,7 +460,6 @@ namespace LoogaSoft.Menu.Editor
 
             AssetDatabase.SaveAssets();
             SelectLayout(nextSelection);
-            GUIUtility.ExitGUI();
         }
 
         private void DrawSelectedLayout(LoogaMenuScreenDefinition screen)

@@ -3,6 +3,7 @@
   "rootNamespace": "LoogaSoft.UI.Extensions.Editor",
   "references": [
     "LoogaSoft.UI.Extensions.Runtime",
+    "LoogaSoft.Inspector.Editor",
     "Unity.TextMeshPro"
   ],
   "includePlatforms": [

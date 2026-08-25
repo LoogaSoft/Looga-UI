@@ -2,10 +2,14 @@ using System.Collections.Generic;
 using System.IO;
 using LoogaSoft.UI.Controls;
 using LoogaSoft.UI.Design;
+using LoogaSoft.Inspector.Editor;
 using TMPro;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
+using Button = UnityEngine.UIElements.Button;
 
 namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 {
@@ -30,9 +34,199 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private void OnEnable()
         {
             _designSystem = LoogaDesignSystemConsolidator.FindLoadedDesignSystem();
+            Selection.selectionChanged += OnSelectionChanged;
         }
 
-        private void OnGUI()
+        private void OnDisable()
+        {
+            Selection.selectionChanged -= OnSelectionChanged;
+        }
+
+        public void CreateGUI()
+        {
+            RebuildUi();
+        }
+
+        private void RebuildUi()
+        {
+            using var _ = LoogaUiToolkitStyle.DesignSystemRefresh.Auto();
+            VisualElement root = rootVisualElement;
+            root.Clear();
+            ScrollView scroll = new(ScrollViewMode.Vertical);
+            scroll.style.flexGrow = 1f;
+            root.Add(scroll);
+
+            VisualElement content = LoogaUiToolkitStyle.CreateInspectorRoot();
+            scroll.Add(content);
+            content.Add(BuildAdoptionSection());
+            content.Add(BuildStyleLibrarySection());
+            content.Add(BuildDesignQualitySection());
+            content.Add(BuildOpenSceneAuditSection());
+        }
+
+        private VisualElement BuildAdoptionSection()
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection(
+                "Adopt Authored UI",
+                "Create one reusable design system from the visuals in all loaded scenes. Matching controls share styles while current visuals stay unchanged.");
+            TextField outputFolder = new("Output Folder") { value = _adoptionOutputFolder };
+            outputFolder.RegisterValueChangedCallback(evt => _adoptionOutputFolder = evt.newValue);
+            section.Add(outputFolder);
+            Button adopt = new(() =>
+            {
+                AdoptLoadedUi();
+                RebuildUi();
+            }) { text = "Create Design System From Loaded UI" };
+            adopt.SetEnabled(!EditorApplication.isPlayingOrWillChangePlaymode);
+            section.Add(adopt);
+            AddSummary(section, _adoptionSummary);
+            return section;
+        }
+
+        private VisualElement BuildStyleLibrarySection()
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection(
+                "Style Library",
+                "Reusable styles belong in the public library. One-off captured styles remain internal and preserve their bound visuals.");
+            ObjectField designSystem = new("Design System")
+            {
+                objectType = typeof(LoogaDesignSystem),
+                allowSceneObjects = false,
+                value = _designSystem
+            };
+            designSystem.RegisterValueChangedCallback(evt =>
+            {
+                _designSystem = evt.newValue as LoogaDesignSystem;
+                RebuildUi();
+            });
+            section.Add(designSystem);
+            IntegerField threshold = new("Reusable At") { value = _reuseThreshold };
+            threshold.RegisterValueChangedCallback(evt => _reuseThreshold = Mathf.Max(2, evt.newValue));
+            section.Add(threshold);
+
+            Button analyze = new(() =>
+            {
+                AnalyzeStyleLibrary();
+                RebuildUi();
+            }) { text = "Analyze Style Usage" };
+            Button consolidate = new(() =>
+            {
+                ConsolidateStyleLibrary();
+                RebuildUi();
+            }) { text = "Consolidate Public Styles" };
+            consolidate.SetEnabled(_designSystem != null);
+            section.Add(LoogaUiToolkitStyle.CreateButtonRow(analyze, consolidate));
+
+            Button promote = new(() =>
+            {
+                LoogaDesignSystemConsolidator.PromoteSelection(_designSystem);
+                AnalyzeStyleLibrary();
+                RebuildUi();
+            }) { text = "Promote Styles On Selected Objects" };
+            promote.SetEnabled(_designSystem != null && Selection.gameObjects.Length > 0);
+            section.Add(promote);
+
+            ObjectField mergeTarget = new("Merge Into")
+            {
+                objectType = typeof(LoogaElementStyle),
+                allowSceneObjects = false,
+                value = _mergeTarget
+            };
+            mergeTarget.RegisterValueChangedCallback(evt =>
+            {
+                _mergeTarget = evt.newValue as LoogaElementStyle;
+                RebuildUi();
+            });
+            section.Add(mergeTarget);
+            Button merge = new(() =>
+            {
+                LoogaDesignSystemConsolidator.MergeSelectionInto(_mergeTarget);
+                AnalyzeStyleLibrary();
+                RebuildUi();
+            }) { text = "Merge Selected Bindings" };
+            merge.SetEnabled(_mergeTarget != null && Selection.gameObjects.Length > 0);
+            section.Add(merge);
+            AddSummary(section, _librarySummary);
+            return section;
+        }
+
+        private VisualElement BuildDesignQualitySection()
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection(
+                "Design Quality",
+                "Measure typography drift, generated style names, repeated decoration, and serialized runtime clones without changing scene objects or assets.");
+            Button analyze = new(() =>
+            {
+                _qualitySummary = LoogaDesignSystemAuditor.Analyze(_designSystem).ToSummary();
+                RebuildUi();
+            }) { text = "Analyze Design Quality" };
+            Button save = new(() =>
+            {
+                SaveDesignQualityReport();
+                RebuildUi();
+            }) { text = "Save Markdown Report" };
+            analyze.SetEnabled(_designSystem != null);
+            save.SetEnabled(_designSystem != null);
+            section.Add(LoogaUiToolkitStyle.CreateButtonRow(analyze, save));
+            AddSummary(section, _qualitySummary);
+            return section;
+        }
+
+        private VisualElement BuildOpenSceneAuditSection()
+        {
+            VisualElement section = LoogaUiToolkitStyle.CreateSection(
+                "Open Scene Audit",
+                "Find loaded UGUI and TextMeshPro objects without a style owner. Typed Looga controls cover their labels, icons, fills, and handles automatically.");
+            Button scan = new(() =>
+            {
+                ScanOpenScenes();
+                RebuildUi();
+            }) { text = "Scan Open Scenes" };
+            Button apply = new(() =>
+            {
+                ApplyAllBindings();
+                RebuildUi();
+            }) { text = "Apply All Bindings" };
+            section.Add(LoogaUiToolkitStyle.CreateButtonRow(scan, apply));
+            Button addSelection = new(() =>
+            {
+                AddBindingsToSelection();
+                RebuildUi();
+            }) { text = "Add Bindings To Selection" };
+            addSelection.SetEnabled(Selection.gameObjects.Length > 0);
+            section.Add(addSelection);
+            section.Add(new Label($"Unbound styleable objects: {_unboundObjects.Count}"));
+
+            foreach (GameObject current in _unboundObjects)
+            {
+                if (current == null)
+                    continue;
+
+                Button select = new(() =>
+                {
+                    Selection.activeGameObject = current;
+                    EditorGUIUtility.PingObject(current);
+                }) { text = GetPath(current) };
+                select.style.unityTextAlign = TextAnchor.MiddleLeft;
+                section.Add(select);
+            }
+
+            return section;
+        }
+
+        private static void AddSummary(VisualElement parent, string summary)
+        {
+            if (!string.IsNullOrWhiteSpace(summary))
+                parent.Add(new HelpBox(summary, HelpBoxMessageType.None));
+        }
+
+        private void OnSelectionChanged()
+        {
+            if (rootVisualElement.panel != null)
+                RebuildUi();
+        }
+
+        private void DrawLegacyGui()
         {
             DrawAdoption();
             EditorGUILayout.Space(10f);
@@ -302,7 +496,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
 
             _unboundObjects.Sort((left, right) => string.CompareOrdinal(GetPath(left), GetPath(right)));
-            Repaint();
+            RebuildUi();
         }
 
         private static void AddCandidates<T>(T[] components, HashSet<GameObject> candidates) where T : Component
