@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LoogaSoft.Inspector.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -9,9 +10,6 @@ namespace LoogaSoft.Menu.Editor
 {
     public sealed class LoogaMenuPreviewWindow : EditorWindow
     {
-        private const float ScreenRowHeight = 38f;
-        private const float ScreenRowSpacing = 4f;
-
         private readonly List<LoogaMenuScreenDefinition> _screens = new();
         private readonly List<LoogaMenuContextDefinition> _contexts = new();
         private readonly Dictionary<LoogaMenuScreenDefinition, bool> _screenFoldouts = new();
@@ -168,7 +166,7 @@ namespace LoogaSoft.Menu.Editor
             foldout.style.marginLeft = 0f;
             foldout.style.marginRight = 0f;
             foldout.style.marginTop = 0f;
-            foldout.style.marginBottom = ScreenRowSpacing;
+            foldout.style.marginBottom = LoogaUiToolkitStyle.InteractiveRowSpacing;
             foldout.style.borderBottomWidth = 1f;
             foldout.style.borderLeftWidth = 1f;
             foldout.style.borderRightWidth = 1f;
@@ -188,8 +186,7 @@ namespace LoogaSoft.Menu.Editor
             Toggle header = foldout.Q<Toggle>();
             if (header != null)
             {
-                StyleInteractiveRow(header);
-                header.style.marginBottom = 0f;
+                LoogaUiToolkitStyle.StyleFoldout(foldout);
                 RegisterRowShortcuts(
                     header,
                     screen,
@@ -257,30 +254,7 @@ namespace LoogaSoft.Menu.Editor
 
         private static void StyleScreenRow(Button row)
         {
-            StyleInteractiveRow(row);
-            row.style.paddingLeft = 8f;
-        }
-
-        private static void StyleInteractiveRow(VisualElement row)
-        {
-            Color normal = EditorGUIUtility.isProSkin
-                ? new Color(0.32f, 0.32f, 0.32f)
-                : new Color(0.76f, 0.76f, 0.76f);
-            Color hover = EditorGUIUtility.isProSkin
-                ? new Color(0.38f, 0.38f, 0.38f)
-                : new Color(0.82f, 0.82f, 0.82f);
-
-            row.style.height = ScreenRowHeight;
-            row.style.minHeight = ScreenRowHeight;
-            row.style.marginLeft = 0f;
-            row.style.marginRight = 0f;
-            row.style.marginTop = 0f;
-            row.style.marginBottom = ScreenRowSpacing;
-            row.style.backgroundColor = normal;
-            row.style.unityFontStyleAndWeight = FontStyle.Bold;
-            row.style.unityTextAlign = TextAnchor.MiddleLeft;
-            row.RegisterCallback<PointerEnterEvent>(_ => row.style.backgroundColor = hover);
-            row.RegisterCallback<PointerLeaveEvent>(_ => row.style.backgroundColor = normal);
+            LoogaUiToolkitStyle.StyleInteractiveRow(row);
         }
 
         private static void RegisterRowShortcuts(
