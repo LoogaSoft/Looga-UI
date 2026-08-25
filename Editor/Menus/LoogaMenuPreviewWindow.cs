@@ -9,6 +9,9 @@ namespace LoogaSoft.Menu.Editor
 {
     public sealed class LoogaMenuPreviewWindow : EditorWindow
     {
+        private const float ScreenRowHeight = 38f;
+        private const float ScreenRowSpacing = 4f;
+
         private readonly List<LoogaMenuScreenDefinition> _screens = new();
         private readonly List<LoogaMenuContextDefinition> _contexts = new();
         private readonly Dictionary<LoogaMenuScreenDefinition, bool> _screenFoldouts = new();
@@ -105,13 +108,16 @@ namespace LoogaSoft.Menu.Editor
                 HelpBoxMessageType.Warning);
             _sceneWarning.style.marginLeft = 4f;
             _sceneWarning.style.marginRight = 4f;
+            _sceneWarning.style.marginTop = 4f;
+            _sceneWarning.style.marginBottom = 4f;
             root.Add(_sceneWarning);
 
             _screenList = new ScrollView(ScrollViewMode.Vertical);
             _screenList.style.flexGrow = 1f;
             _screenList.style.paddingLeft = 4f;
             _screenList.style.paddingRight = 4f;
-            _screenList.style.paddingTop = 3f;
+            _screenList.style.paddingTop = 0f;
+            _screenList.style.paddingBottom = 4f;
             root.Add(_screenList);
 
             RefreshVisualState();
@@ -159,7 +165,10 @@ namespace LoogaSoft.Menu.Editor
                     "screen definition")
             };
             foldout.AddToClassList("looga-menu-preview-screen");
-            foldout.style.marginBottom = 3f;
+            foldout.style.marginLeft = 0f;
+            foldout.style.marginRight = 0f;
+            foldout.style.marginTop = 0f;
+            foldout.style.marginBottom = ScreenRowSpacing;
             foldout.style.borderBottomWidth = 1f;
             foldout.style.borderLeftWidth = 1f;
             foldout.style.borderRightWidth = 1f;
@@ -179,13 +188,21 @@ namespace LoogaSoft.Menu.Editor
             Toggle header = foldout.Q<Toggle>();
             if (header != null)
             {
-                header.style.minHeight = 38f;
-                header.style.unityFontStyleAndWeight = FontStyle.Bold;
+                StyleInteractiveRow(header);
+                header.style.marginBottom = 0f;
                 RegisterRowShortcuts(
                     header,
                     screen,
                     canPreview,
                     () => SelectSceneObjects(screen, screen.DefaultLayout));
+            }
+
+            VisualElement content = foldout.Q<VisualElement>(className: "unity-foldout__content");
+            if (content != null)
+            {
+                content.style.marginLeft = 0f;
+                content.style.paddingLeft = 0f;
+                content.style.paddingRight = 0f;
             }
 
             foreach (LoogaMenuScreenLayout layout in screen.Layouts)
@@ -204,8 +221,9 @@ namespace LoogaSoft.Menu.Editor
                 layoutRow.style.height = 34f;
                 layoutRow.style.marginLeft = 8f;
                 layoutRow.style.marginRight = 8f;
-                layoutRow.style.marginTop = 0f;
+                layoutRow.style.marginTop = 2f;
                 layoutRow.style.marginBottom = 0f;
+                layoutRow.style.paddingLeft = 6f;
                 layoutRow.style.unityTextAlign = TextAnchor.MiddleLeft;
                 foldout.Add(layoutRow);
             }
@@ -239,10 +257,30 @@ namespace LoogaSoft.Menu.Editor
 
         private static void StyleScreenRow(Button row)
         {
-            row.style.height = 38f;
-            row.style.marginBottom = 3f;
+            StyleInteractiveRow(row);
+            row.style.paddingLeft = 8f;
+        }
+
+        private static void StyleInteractiveRow(VisualElement row)
+        {
+            Color normal = EditorGUIUtility.isProSkin
+                ? new Color(0.32f, 0.32f, 0.32f)
+                : new Color(0.76f, 0.76f, 0.76f);
+            Color hover = EditorGUIUtility.isProSkin
+                ? new Color(0.38f, 0.38f, 0.38f)
+                : new Color(0.82f, 0.82f, 0.82f);
+
+            row.style.height = ScreenRowHeight;
+            row.style.minHeight = ScreenRowHeight;
+            row.style.marginLeft = 0f;
+            row.style.marginRight = 0f;
+            row.style.marginTop = 0f;
+            row.style.marginBottom = ScreenRowSpacing;
+            row.style.backgroundColor = normal;
             row.style.unityFontStyleAndWeight = FontStyle.Bold;
             row.style.unityTextAlign = TextAnchor.MiddleLeft;
+            row.RegisterCallback<PointerEnterEvent>(_ => row.style.backgroundColor = hover);
+            row.RegisterCallback<PointerLeaveEvent>(_ => row.style.backgroundColor = normal);
         }
 
         private static void RegisterRowShortcuts(
