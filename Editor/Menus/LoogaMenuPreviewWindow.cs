@@ -15,51 +15,65 @@ namespace LoogaSoft.Menu.Editor
         private readonly List<LoogaMenuScreenDefinition> _screens = new();
         private readonly List<LoogaMenuContextDefinition> _contexts = new();
         private readonly Dictionary<LoogaMenuScreenDefinition, bool> _screenFoldouts = new();
+        private readonly Dictionary<LoogaMenuPanelDefinition, List<LoogaMenuPanel>> _panelsByDefinition = new();
+        private readonly Dictionary<PreviewKey, GameObject[]> _sceneObjectsByPreview = new();
         private static readonly string[] NoContextOption = { "No Context" };
         private static GUIStyle _configurationButtonStyle;
         private string[] _contextNames = NoContextOption;
+        private LoogaMenuPanel[] _scenePanels = Array.Empty<LoogaMenuPanel>();
+        private LoogaMenuRegionObjectActivator[] _regionActivators = Array.Empty<LoogaMenuRegionObjectActivator>();
+        private ILoogaMenuPreviewPresenter[] _previewPresenters = Array.Empty<ILoogaMenuPreviewPresenter>();
+        private LoogaMenuRoot _menuRoot;
+        private LoogaMenuStructureProfile _structure;
         private Vector2 _scrollPosition;
         private LoogaMenuContextDefinition _previewContext;
         private LoogaMenuScreenDefinition _previewedScreen;
         private LoogaMenuScreenLayout _previewedLayout;
         private bool _includeSharedUi = true;
+        private bool _definitionsDirty = true;
+        private bool _sceneCacheDirty = true;
 
         [MenuItem("LoogaSoft/UI/Menus/Menu Preview", priority = 23)]
         public static void Open()
         {
             LoogaMenuPreviewWindow window = GetWindow<LoogaMenuPreviewWindow>("Menu Preview");
             window.minSize = new Vector2(360f, 260f);
-            window.RefreshDefinitions();
+            window.RefreshCaches();
             window.Show();
         }
 
         private void OnEnable()
         {
             wantsMouseMove = true;
+            EditorApplication.hierarchyChanged += HandleHierarchyChanged;
+            EditorApplication.projectChanged += HandleProjectChanged;
+            RefreshCaches();
         }
 
-        private void OnFocus()
+        private void OnDisable()
         {
-            RefreshDefinitions();
+            EditorApplication.hierarchyChanged -= HandleHierarchyChanged;
+            EditorApplication.projectChanged -= HandleProjectChanged;
         }
 
         private void OnGUI()
         {
+            EnsureCaches();
+
             if (Event.current.type == EventType.MouseMove)
                 Repaint();
 
-            LoogaMenuPanel[] panels = LoogaMenuEditorUtility.FindScenePanels();
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 GUILayout.FlexibleSpace();
-                using (new EditorGUI.DisabledScope(panels.Length == 0))
+                using (new EditorGUI.DisabledScope(_scenePanels.Length == 0))
                 {
                     if (GUILayout.Button("Reset", EditorStyles.toolbarButton, GUILayout.Width(64f)))
-                        ClearPreview(panels);
+                        ClearPreview();
                 }
 
                 if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(72f)))
-                    RefreshDefinitions();
+                    RefreshCaches();
             }
 
             bool sharedUiChanged;
@@ -80,9 +94,12 @@ namespace LoogaSoft.Menu.Editor
             }
 
             if (sharedUiChanged || contextChanged)
+            {
+                _sceneObjectsByPreview.Clear();
                 ReapplyCurrentPreview();
+            }
 
-            if (panels.Length == 0)
+            if (_scenePanels.Length == 0)
             {
                 EditorGUILayout.HelpBox(
                     "Open the UI scene that contains the LoogaMenuPanel objects to preview screens.",
@@ -91,11 +108,11 @@ namespace LoogaSoft.Menu.Editor
 
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
             foreach (LoogaMenuScreenDefinition screen in _screens)
-                DrawScreen(screen, panels);
+                DrawScreen(screen);
             EditorGUILayout.EndScrollView();
         }
 
-        private void DrawScreen(LoogaMenuScreenDefinition screen, LoogaMenuPanel[] scenePanels)
+        private void DrawScreen(LoogaMenuScreenDefinition screen)
         {
             if (screen == null)
                 return;
@@ -120,7 +137,7 @@ namespace LoogaSoft.Menu.Editor
                             : "Preview this screen.",
                         "screen definition"));
 
-                bool canPreview = scenePanels.Length > 0;
+                bool canPreview = _scenePanels.Length > 0;
                 if (DrawScreenHeader(
                         headerRect,
                         clickRect,
@@ -129,9 +146,9 @@ namespace LoogaSoft.Menu.Editor
                         hasLayoutFoldout,
                         expanded,
                         canPreview,
-                        HasSceneObjects(screen, screen.DefaultLayout, scenePanels),
+                        canPreview,
                         () => Preview(screen, screen.DefaultLayout),
-                        () => SelectSceneObjects(screen, screen.DefaultLayout, scenePanels)))
+                        () => SelectSceneObjects(screen, screen.DefaultLayout)))
                 {
                     expanded = !expanded;
                 }
@@ -163,9 +180,9 @@ namespace LoogaSoft.Menu.Editor
                         layout,
                         layout.DisplayName + suffix,
                         canPreview,
-                        HasSceneObjects(screen, layout, scenePanels),
+                        canPreview,
                         () => Preview(screen, layout),
-                        () => SelectSceneObjects(screen, layout, scenePanels));
+                        () => SelectSceneObjects(screen, layout));
                     configurationIndex++;
                 }
 
@@ -320,6 +337,50 @@ namespace LoogaSoft.Menu.Editor
             return count;
         }
 
+        private void RefreshCaches()
+        {
+            _definitionsDirty = true;
+            _sceneCacheDirty = true;
+            EnsureCaches();
+            Repaint();
+        }
+
+        private void EnsureCaches()
+        {
+            if (_sceneCacheDirty)
+                RefreshSceneCache();
+
+            if (_definitionsDirty)
+                RefreshDefinitions();
+        }
+
+        private void RefreshSceneCache()
+        {
+            _scenePanels = LoogaMenuEditorUtility.FindScenePanels();
+            _menuRoot = LoogaMenuEditorUtility.FindMenuRoot();
+            _structure = ResolveStructure(_menuRoot);
+            _regionActivators = FindRegionActivators();
+            _previewPresenters = FindPreviewPresenters();
+
+            _panelsByDefinition.Clear();
+            foreach (LoogaMenuPanel panel in _scenePanels)
+            {
+                if (panel == null || panel.Panel == null)
+                    continue;
+
+                if (!_panelsByDefinition.TryGetValue(panel.Panel, out List<LoogaMenuPanel> matches))
+                {
+                    matches = new List<LoogaMenuPanel>();
+                    _panelsByDefinition.Add(panel.Panel, matches);
+                }
+
+                matches.Add(panel);
+            }
+
+            _sceneObjectsByPreview.Clear();
+            _sceneCacheDirty = false;
+        }
+
         private void RefreshDefinitions()
         {
             _screens.Clear();
@@ -369,11 +430,28 @@ namespace LoogaSoft.Menu.Editor
             if (_previewContext == null || !_contexts.Contains(_previewContext))
             {
                 LoogaMenuContextDefinition defaultContext =
-                    LoogaMenuEditorUtility.FindMenuRoot()?.DefaultContext;
+                    _menuRoot != null ? _menuRoot.DefaultContext : null;
                 _previewContext = defaultContext != null && _contexts.Contains(defaultContext)
                     ? defaultContext
                     : _contexts.Count > 0 ? _contexts[0] : null;
             }
+
+            _sceneObjectsByPreview.Clear();
+            _definitionsDirty = false;
+        }
+
+        private void HandleHierarchyChanged()
+        {
+            _sceneCacheDirty = true;
+            _sceneObjectsByPreview.Clear();
+            Repaint();
+        }
+
+        private void HandleProjectChanged()
+        {
+            _definitionsDirty = true;
+            _sceneObjectsByPreview.Clear();
+            Repaint();
         }
 
         private bool DrawContextSelector()
@@ -409,32 +487,23 @@ namespace LoogaSoft.Menu.Editor
                 Preview(_previewedScreen, _previewedLayout);
         }
 
-        private void ClearPreview(LoogaMenuPanel[] panels)
+        private void ClearPreview()
         {
             _previewedScreen = null;
             _previewedLayout = null;
-            ResetPreview(panels);
-        }
-
-        private bool HasSceneObjects(
-            LoogaMenuScreenDefinition screen,
-            LoogaMenuScreenLayout layout,
-            LoogaMenuPanel[] scenePanels)
-        {
-            return FindSceneObjects(screen, layout, scenePanels).Count > 0;
+            ResetPreview();
         }
 
         private void SelectSceneObjects(
             LoogaMenuScreenDefinition screen,
-            LoogaMenuScreenLayout layout,
-            LoogaMenuPanel[] scenePanels)
+            LoogaMenuScreenLayout layout)
         {
-            List<GameObject> sceneObjects = FindSceneObjects(screen, layout, scenePanels);
-            if (sceneObjects.Count == 0)
+            GameObject[] sceneObjects = FindSceneObjects(screen, layout);
+            if (sceneObjects.Length == 0)
                 return;
 
-            UnityEngine.Object[] selection = new UnityEngine.Object[sceneObjects.Count];
-            for (int i = 0; i < sceneObjects.Count; i++)
+            UnityEngine.Object[] selection = new UnityEngine.Object[sceneObjects.Length];
+            for (int i = 0; i < sceneObjects.Length; i++)
                 selection[i] = sceneObjects[i];
 
             Selection.objects = selection;
@@ -442,39 +511,58 @@ namespace LoogaSoft.Menu.Editor
             EditorGUIUtility.PingObject(sceneObjects[0]);
         }
 
-        private List<GameObject> FindSceneObjects(
+        private GameObject[] FindSceneObjects(
             LoogaMenuScreenDefinition screen,
-            LoogaMenuScreenLayout layout,
-            LoogaMenuPanel[] scenePanels)
+            LoogaMenuScreenLayout layout)
         {
+            PreviewKey key = new(screen, layout);
+            if (_sceneObjectsByPreview.TryGetValue(key, out GameObject[] cached))
+                return cached;
+
             HashSet<LoogaMenuPanelDefinition> definitions = CollectPanelDefinitions(screen, layout);
             List<GameObject> sceneObjects = new();
-            foreach (LoogaMenuPanel panel in scenePanels)
+            HashSet<GameObject> uniqueObjects = new();
+            foreach (LoogaMenuPanel panel in _scenePanels)
             {
-                if (panel != null && panel.Panel != null && definitions.Contains(panel.Panel))
+                if (panel != null
+                    && panel.Panel != null
+                    && definitions.Contains(panel.Panel)
+                    && uniqueObjects.Add(panel.gameObject))
+                {
                     sceneObjects.Add(panel.gameObject);
+                }
             }
 
-            if (_includeSharedUi)
+            if (_includeSharedUi && _structure != null)
             {
-                LoogaMenuRoot root = LoogaMenuEditorUtility.FindMenuRoot();
-                LoogaMenuStructureProfile structure = ResolveStructure(root);
-                foreach (LoogaMenuRegionObjectActivator activator in FindRegionActivators())
+                Dictionary<LoogaMenuRegionDefinition, bool> contentByRegion = new();
+                foreach (LoogaMenuRegionObjectActivator activator in _regionActivators)
                 {
                     if (activator == null
                         || activator.Target == null
-                        || structure == null
-                        || !RegionHasPreviewContent(root, screen, layout, activator.Region))
+                        || activator.Region == null)
                     {
                         continue;
                     }
 
-                    if (!sceneObjects.Contains(activator.Target))
+                    if (!contentByRegion.TryGetValue(activator.Region, out bool hasContent))
+                    {
+                        hasContent = RegionHasPreviewContent(
+                            _menuRoot,
+                            screen,
+                            layout,
+                            activator.Region);
+                        contentByRegion.Add(activator.Region, hasContent);
+                    }
+
+                    if (hasContent && uniqueObjects.Add(activator.Target))
                         sceneObjects.Add(activator.Target);
                 }
             }
 
-            return sceneObjects;
+            cached = sceneObjects.ToArray();
+            _sceneObjectsByPreview.Add(key, cached);
+            return cached;
         }
 
         private HashSet<LoogaMenuPanelDefinition> CollectPanelDefinitions(
@@ -492,16 +580,14 @@ namespace LoogaSoft.Menu.Editor
                     definitions.Add(entry.Panel);
             }
 
-            LoogaMenuRoot root = LoogaMenuEditorUtility.FindMenuRoot();
-            LoogaMenuStructureProfile structure = ResolveStructure(root);
-            if (!_includeSharedUi || structure == null)
+            if (!_includeSharedUi || _structure == null)
                 return definitions;
 
             List<LoogaMenuPanelDefinition> regionPanels = new();
-            foreach (LoogaMenuRegionDefinition region in structure.Regions)
+            foreach (LoogaMenuRegionDefinition region in _structure.Regions)
             {
                 LoogaMenuRegionPanelResolver.Collect(
-                    root,
+                    _menuRoot,
                     _previewContext,
                     screen,
                     layout,
@@ -519,10 +605,10 @@ namespace LoogaSoft.Menu.Editor
 
         private void Preview(LoogaMenuScreenDefinition screen, LoogaMenuScreenLayout layout)
         {
+            EnsureCaches();
             _previewedScreen = screen;
             _previewedLayout = layout;
-            LoogaMenuPanel[] panels = LoogaMenuEditorUtility.FindScenePanels();
-            ResetPreview(panels);
+            ResetPreview();
 
             HashSet<LoogaMenuPanelDefinition> definitions = CollectPanelDefinitions(screen, layout);
             foreach (LoogaMenuPanelDefinition definition in definitions)
@@ -532,53 +618,63 @@ namespace LoogaSoft.Menu.Editor
                 ApplySharedPreview(screen, layout);
         }
 
-        private static void ResetPreview(LoogaMenuPanel[] panels)
+        private void ResetPreview()
         {
-            foreach (ILoogaMenuPreviewPresenter presenter in FindPreviewPresenters())
-                presenter.ClearMenuPreview();
+            foreach (ILoogaMenuPreviewPresenter presenter in _previewPresenters)
+            {
+                if (IsDestroyedPresenter(presenter))
+                    continue;
 
-            foreach (LoogaMenuRegionObjectActivator activator in FindRegionActivators())
+                presenter.ClearMenuPreview();
+            }
+
+            foreach (LoogaMenuRegionObjectActivator activator in _regionActivators)
             {
                 if (activator != null && activator.Target != null && activator.Target.activeSelf)
                     activator.Target.SetActive(false);
             }
 
-            foreach (LoogaMenuPanel panel in panels)
+            foreach (LoogaMenuPanel panel in _scenePanels)
             {
+                if (panel == null)
+                    continue;
+
                 panel.Hide();
                 EditorUtility.SetDirty(panel);
             }
         }
 
-        private static void ShowPanel(LoogaMenuPanelDefinition definition)
+        private void ShowPanel(LoogaMenuPanelDefinition definition)
         {
             if (definition == null
-                || !LoogaMenuEditorUtility.TryFindPanel(definition, out LoogaMenuPanel panel))
-            {
+                || !_panelsByDefinition.TryGetValue(definition, out List<LoogaMenuPanel> panels))
                 return;
-            }
 
-            panel.Show();
-            EditorUtility.SetDirty(panel);
+            foreach (LoogaMenuPanel panel in panels)
+            {
+                if (panel == null)
+                    continue;
+
+                panel.Show();
+                EditorUtility.SetDirty(panel);
+            }
         }
 
         private void ApplySharedPreview(
             LoogaMenuScreenDefinition screen,
             LoogaMenuScreenLayout layout)
         {
-            LoogaMenuRoot root = LoogaMenuEditorUtility.FindMenuRoot();
-            LoogaMenuStructureProfile structure = ResolveStructure(root);
-            if (structure == null)
+            if (_structure == null)
                 return;
 
-            foreach (LoogaMenuRegionDefinition region in structure.Regions)
+            foreach (LoogaMenuRegionDefinition region in _structure.Regions)
             {
                 if (region == null)
                     continue;
 
                 List<LoogaMenuPanelDefinition> panels = new();
                 LoogaMenuRegionPanelResolver.Collect(
-                    root,
+                    _menuRoot,
                     _previewContext,
                     screen,
                     layout,
@@ -586,14 +682,14 @@ namespace LoogaSoft.Menu.Editor
                     panels);
                 LoogaMenuNavigationRegionContent navigation =
                     LoogaMenuRegionPanelResolver.CreateNavigationPreview(
-                        root,
+                        _menuRoot,
                         _previewContext,
                         screen,
                         layout,
                         region);
                 bool hasContent = panels.Count > 0 || navigation != null;
 
-                foreach (LoogaMenuRegionObjectActivator activator in FindRegionActivators())
+                foreach (LoogaMenuRegionObjectActivator activator in _regionActivators)
                 {
                     if (activator != null
                         && activator.Region == region
@@ -604,9 +700,9 @@ namespace LoogaSoft.Menu.Editor
                     }
                 }
 
-                foreach (ILoogaMenuPreviewPresenter presenter in FindPreviewPresenters())
+                foreach (ILoogaMenuPreviewPresenter presenter in _previewPresenters)
                 {
-                    if (presenter.Region == region)
+                    if (!IsDestroyedPresenter(presenter) && presenter.Region == region)
                         presenter.ApplyMenuPreview(navigation);
                 }
 
@@ -650,6 +746,12 @@ namespace LoogaSoft.Menu.Editor
             return root != null ? root.Structure : LoogaMenuStructureEditorUtility.FindStructure();
         }
 
+        private static bool IsDestroyedPresenter(ILoogaMenuPreviewPresenter presenter)
+        {
+            return presenter == null
+                   || presenter is UnityEngine.Object unityObject && unityObject == null;
+        }
+
         private static ILoogaMenuPreviewPresenter[] FindPreviewPresenters()
         {
             List<ILoogaMenuPreviewPresenter> presenters = new();
@@ -669,6 +771,36 @@ namespace LoogaSoft.Menu.Editor
             return UnityEngine.Object.FindObjectsByType<LoogaMenuRegionObjectActivator>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
+        }
+
+        private readonly struct PreviewKey : IEquatable<PreviewKey>
+        {
+            private readonly int _screenId;
+            private readonly int _layoutId;
+
+            public PreviewKey(LoogaMenuScreenDefinition screen, LoogaMenuScreenLayout layout)
+            {
+                _screenId = screen != null ? screen.GetInstanceID() : 0;
+                _layoutId = layout != null ? layout.GetInstanceID() : 0;
+            }
+
+            public bool Equals(PreviewKey other)
+            {
+                return _screenId == other._screenId && _layoutId == other._layoutId;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is PreviewKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_screenId * 397) ^ _layoutId;
+                }
+            }
         }
     }
 }
