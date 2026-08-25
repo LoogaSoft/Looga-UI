@@ -1,37 +1,37 @@
 using System;
 using System.Collections.Generic;
-using LoogaSoft.Inspector.Editor;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace LoogaSoft.Menu.Editor
 {
     public sealed class LoogaMenuPreviewWindow : EditorWindow
     {
-        private const float ConfigurationTextInsetPixels = 8f;
-        private const float ExpandedScreenBottomPaddingPixels = 7f;
-        private const float HeaderArrowTextGapPixels = 4f;
-
         private readonly List<LoogaMenuScreenDefinition> _screens = new();
         private readonly List<LoogaMenuContextDefinition> _contexts = new();
         private readonly Dictionary<LoogaMenuScreenDefinition, bool> _screenFoldouts = new();
         private readonly Dictionary<LoogaMenuPanelDefinition, List<LoogaMenuPanel>> _panelsByDefinition = new();
         private readonly Dictionary<PreviewKey, GameObject[]> _sceneObjectsByPreview = new();
         private static readonly string[] NoContextOption = { "No Context" };
-        private static GUIStyle _configurationButtonStyle;
         private string[] _contextNames = NoContextOption;
         private LoogaMenuPanel[] _scenePanels = Array.Empty<LoogaMenuPanel>();
         private LoogaMenuRegionObjectActivator[] _regionActivators = Array.Empty<LoogaMenuRegionObjectActivator>();
         private ILoogaMenuPreviewPresenter[] _previewPresenters = Array.Empty<ILoogaMenuPreviewPresenter>();
         private LoogaMenuRoot _menuRoot;
         private LoogaMenuStructureProfile _structure;
-        private Vector2 _scrollPosition;
         private LoogaMenuContextDefinition _previewContext;
         private LoogaMenuScreenDefinition _previewedScreen;
         private LoogaMenuScreenLayout _previewedLayout;
         private bool _includeSharedUi = true;
         private bool _definitionsDirty = true;
         private bool _sceneCacheDirty = true;
+        private Button _resetButton;
+        private DropdownField _contextField;
+        private HelpBox _sceneWarning;
+        private ScrollView _screenList;
+        private ToolbarToggle _sharedUiToggle;
 
         [MenuItem("LoogaSoft/UI/Menus/Menu Preview", priority = 23)]
         public static void Open()
@@ -44,7 +44,6 @@ namespace LoogaSoft.Menu.Editor
 
         private void OnEnable()
         {
-            wantsMouseMove = true;
             EditorApplication.hierarchyChanged += HandleHierarchyChanged;
             EditorApplication.projectChanged += HandleProjectChanged;
             RefreshCaches();
@@ -56,247 +55,217 @@ namespace LoogaSoft.Menu.Editor
             EditorApplication.projectChanged -= HandleProjectChanged;
         }
 
-        private void OnGUI()
+        public void CreateGUI()
         {
             EnsureCaches();
 
-            if (Event.current.type == EventType.MouseMove)
-                Repaint();
+            VisualElement root = rootVisualElement;
+            root.Clear();
+            root.style.flexDirection = FlexDirection.Column;
 
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            Toolbar commandBar = new();
+            VisualElement commandSpacer = new();
+            commandSpacer.style.flexGrow = 1f;
+            commandBar.Add(commandSpacer);
+
+            _resetButton = new ToolbarButton(ClearPreview) { text = "Reset" };
+            _resetButton.style.width = 64f;
+            commandBar.Add(_resetButton);
+
+            ToolbarButton refreshButton = new(RefreshCaches) { text = "Refresh" };
+            refreshButton.style.width = 72f;
+            commandBar.Add(refreshButton);
+            root.Add(commandBar);
+
+            Toolbar previewBar = new();
+            _sharedUiToggle = new ToolbarToggle
             {
-                GUILayout.FlexibleSpace();
-                using (new EditorGUI.DisabledScope(_scenePanels.Length == 0))
-                {
-                    if (GUILayout.Button("Reset", EditorStyles.toolbarButton, GUILayout.Width(64f)))
-                        ClearPreview();
-                }
-
-                if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(72f)))
-                    RefreshCaches();
-            }
-
-            bool sharedUiChanged;
-            bool contextChanged;
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+                text = "Shared UI",
+                tooltip = "Include context, navigation, header, background, and action regions."
+            };
+            _sharedUiToggle.SetValueWithoutNotify(_includeSharedUi);
+            _sharedUiToggle.RegisterValueChangedCallback(evt =>
             {
-                EditorGUI.BeginChangeCheck();
-                _includeSharedUi = GUILayout.Toggle(
-                    _includeSharedUi,
-                    new GUIContent(
-                        "Shared UI",
-                        "Include context, navigation, header, background, and action regions."),
-                    EditorStyles.toolbarButton,
-                    GUILayout.Width(78f));
-                sharedUiChanged = EditorGUI.EndChangeCheck();
-                using (new EditorGUI.DisabledScope(!_includeSharedUi))
-                    contextChanged = DrawContextSelector();
-            }
-
-            if (sharedUiChanged || contextChanged)
-            {
+                _includeSharedUi = evt.newValue;
+                _contextField?.SetEnabled(_includeSharedUi && _contexts.Count > 0);
                 _sceneObjectsByPreview.Clear();
                 ReapplyCurrentPreview();
-            }
+            });
+            previewBar.Add(_sharedUiToggle);
 
-            if (_scenePanels.Length == 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "Open the UI scene that contains the LoogaMenuPanel objects to preview screens.",
-                    MessageType.Warning);
-            }
+            _contextField = new DropdownField();
+            _contextField.style.flexGrow = 1f;
+            _contextField.style.minWidth = 100f;
+            _contextField.RegisterValueChangedCallback(HandleContextChanged);
+            previewBar.Add(_contextField);
+            root.Add(previewBar);
 
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+            _sceneWarning = new HelpBox(
+                "Open the UI scene that contains the LoogaMenuPanel objects to preview screens.",
+                HelpBoxMessageType.Warning);
+            _sceneWarning.style.marginLeft = 4f;
+            _sceneWarning.style.marginRight = 4f;
+            root.Add(_sceneWarning);
+
+            _screenList = new ScrollView(ScrollViewMode.Vertical);
+            _screenList.style.flexGrow = 1f;
+            _screenList.style.paddingLeft = 4f;
+            _screenList.style.paddingRight = 4f;
+            _screenList.style.paddingTop = 3f;
+            root.Add(_screenList);
+
+            RefreshVisualState();
+        }
+
+        private void RefreshVisualState()
+        {
+            if (_screenList == null)
+                return;
+
+            bool canPreview = _scenePanels.Length > 0;
+            _resetButton?.SetEnabled(canPreview);
+            _sceneWarning.style.display = canPreview ? DisplayStyle.None : DisplayStyle.Flex;
+            RefreshContextField();
+
+            _screenList.Clear();
             foreach (LoogaMenuScreenDefinition screen in _screens)
-                DrawScreen(screen);
-            EditorGUILayout.EndScrollView();
+            {
+                if (screen != null)
+                    _screenList.Add(CreateScreenElement(screen, canPreview));
+            }
         }
 
-        private void DrawScreen(LoogaMenuScreenDefinition screen)
+        private VisualElement CreateScreenElement(LoogaMenuScreenDefinition screen, bool canPreview)
         {
-            if (screen == null)
-                return;
-
             int layoutCount = CountLayouts(screen.Layouts);
-            bool hasLayoutFoldout = layoutCount > 1;
-            bool expanded = hasLayoutFoldout
-                && _screenFoldouts.TryGetValue(screen, out bool current)
-                && current;
-
-            using (LoogaEditorFoldouts.BeginLargeFoldoutLayout(
-                       expanded,
-                       out Rect headerRect,
-                       out Rect clickRect))
+            if (layoutCount <= 1)
             {
-                string countSuffix = hasLayoutFoldout ? $" ({layoutCount})" : string.Empty;
-                GUIContent label = new(
-                    screen.DisplayName + countSuffix,
-                    BuildRowTooltip(
-                        hasLayoutFoldout
-                            ? "Expand or collapse this screen's layouts."
-                            : "Preview this screen.",
-                        "screen definition"));
-
-                bool canPreview = _scenePanels.Length > 0;
-                if (DrawScreenHeader(
-                        headerRect,
-                        clickRect,
-                        label,
-                        screen,
-                        hasLayoutFoldout,
-                        expanded,
-                        canPreview,
-                        canPreview,
-                        () => Preview(screen, screen.DefaultLayout),
-                        () => SelectSceneObjects(screen, screen.DefaultLayout)))
-                {
-                    expanded = !expanded;
-                }
-
-                if (hasLayoutFoldout)
-                    _screenFoldouts[screen] = expanded;
-
-                if (!expanded)
-                    return;
-
-                float configurationRowHeight = LoogaEditorFoldouts.GetLargeFoldoutHeaderHeight();
-                Rect configurationBlock = EditorGUILayout.GetControlRect(
-                    false,
-                    configurationRowHeight * layoutCount);
-                int configurationIndex = 0;
-                foreach (LoogaMenuScreenLayout layout in screen.Layouts)
-                {
-                    if (layout == null)
-                        continue;
-
-                    Rect rowRect = new(
-                        configurationBlock.x,
-                        configurationBlock.y + configurationRowHeight * configurationIndex,
-                        configurationBlock.width,
-                        configurationRowHeight);
-                    string suffix = layout == screen.DefaultLayout ? " (Default)" : string.Empty;
-                    DrawConfigurationRow(
-                        rowRect,
-                        layout,
-                        layout.DisplayName + suffix,
-                        canPreview,
-                        canPreview,
-                        () => Preview(screen, layout),
-                        () => SelectSceneObjects(screen, layout));
-                    configurationIndex++;
-                }
-
-                EditorGUILayout.Space(LoogaEditorStyle.Pixels(ExpandedScreenBottomPaddingPixels));
+                Button row = CreatePreviewButton(
+                    screen.DisplayName,
+                    BuildRowTooltip("Preview this screen.", "screen definition"),
+                    screen,
+                    canPreview,
+                    () => Preview(screen, screen.DefaultLayout),
+                    () => SelectSceneObjects(screen, screen.DefaultLayout));
+                StyleScreenRow(row);
+                return row;
             }
+
+            Foldout foldout = new()
+            {
+                text = $"{screen.DisplayName} ({layoutCount})",
+                tooltip = BuildRowTooltip(
+                    "Expand or collapse this screen's layouts.",
+                    "screen definition")
+            };
+            foldout.AddToClassList("looga-menu-preview-screen");
+            foldout.style.marginBottom = 3f;
+            foldout.style.borderBottomWidth = 1f;
+            foldout.style.borderLeftWidth = 1f;
+            foldout.style.borderRightWidth = 1f;
+            foldout.style.borderTopWidth = 1f;
+            Color border = EditorGUIUtility.isProSkin
+                ? new Color(0.14f, 0.14f, 0.14f)
+                : new Color(0.58f, 0.58f, 0.58f);
+            foldout.style.borderBottomColor = border;
+            foldout.style.borderLeftColor = border;
+            foldout.style.borderRightColor = border;
+            foldout.style.borderTopColor = border;
+
+            bool expanded = _screenFoldouts.TryGetValue(screen, out bool current) && current;
+            foldout.SetValueWithoutNotify(expanded);
+            foldout.RegisterValueChangedCallback(evt => _screenFoldouts[screen] = evt.newValue);
+
+            Toggle header = foldout.Q<Toggle>();
+            if (header != null)
+            {
+                header.style.minHeight = 38f;
+                header.style.unityFontStyleAndWeight = FontStyle.Bold;
+                RegisterRowShortcuts(
+                    header,
+                    screen,
+                    canPreview,
+                    () => SelectSceneObjects(screen, screen.DefaultLayout));
+            }
+
+            foreach (LoogaMenuScreenLayout layout in screen.Layouts)
+            {
+                if (layout == null)
+                    continue;
+
+                string suffix = layout == screen.DefaultLayout ? " (Default)" : string.Empty;
+                Button layoutRow = CreatePreviewButton(
+                    layout.DisplayName + suffix,
+                    BuildRowTooltip("Preview this layout.", "layout definition"),
+                    layout,
+                    canPreview,
+                    () => Preview(screen, layout),
+                    () => SelectSceneObjects(screen, layout));
+                layoutRow.style.height = 34f;
+                layoutRow.style.marginLeft = 8f;
+                layoutRow.style.marginRight = 8f;
+                layoutRow.style.marginTop = 0f;
+                layoutRow.style.marginBottom = 0f;
+                layoutRow.style.unityTextAlign = TextAnchor.MiddleLeft;
+                foldout.Add(layoutRow);
+            }
+
+            VisualElement bottomPadding = new();
+            bottomPadding.style.height = 7f;
+            foldout.Add(bottomPadding);
+            return foldout;
         }
 
-        private static bool DrawScreenHeader(
-            Rect headerRect,
-            Rect clickRect,
-            GUIContent label,
-            ScriptableObject definition,
-            bool showFoldout,
-            bool expanded,
+        private static Button CreatePreviewButton(
+            string text,
+            string tooltip,
+            UnityEngine.Object definition,
             bool canPreview,
-            bool canSelect,
             Action preview,
             Action selectSceneObjects)
         {
-            headerRect = LoogaEditorStyle.PixelSnap(headerRect);
-            clickRect = LoogaEditorStyle.PixelSnap(clickRect);
-
-            Rect contentRect = LoogaEditorFoldouts.GetLargeFoldoutHeaderContentRect(headerRect, false);
-            Rect arrowRect = LoogaEditorFoldouts.GetLargeFoldoutArrowRect(headerRect);
-            if (showFoldout)
+            Button button = new(() =>
             {
-                arrowRect.x = contentRect.xMin;
-                contentRect.xMin = arrowRect.xMax + LoogaEditorStyle.Pixels(HeaderArrowTextGapPixels);
-            }
-
-            Event current = Event.current;
-            if (clickRect.Contains(current.mousePosition))
-                LoogaEditorFoldouts.DrawHoverRect(clickRect);
-
-            GUI.Label(contentRect, label, EditorStyles.boldLabel);
-            if (showFoldout)
-                LoogaEditorStyle.DrawFoldoutTriangle(arrowRect, expanded);
-
-            if (HandleRowShortcut(clickRect, definition, canSelect, selectSceneObjects))
-                return false;
-
-            if (current.type != EventType.MouseDown
-                || current.button != 0
-                || !clickRect.Contains(current.mousePosition))
-            {
-                return false;
-            }
-
-            if (showFoldout)
-            {
-                current.Use();
-                return true;
-            }
-
-            if (canPreview)
-            {
-                preview?.Invoke();
-                current.Use();
-            }
-
-            return false;
-        }
-
-        private static void DrawConfigurationRow(
-            Rect rowRect,
-            LoogaMenuScreenLayout layout,
-            string displayName,
-            bool canPreview,
-            bool canSelect,
-            Action preview,
-            Action selectSceneObjects)
-        {
-            rowRect = LoogaEditorStyle.PixelSnap(rowRect);
-            if (HandleRowShortcut(rowRect, layout, canSelect, selectSceneObjects))
-                return;
-
-            GUIContent content = new(
-                string.IsNullOrWhiteSpace(displayName) ? layout.name : displayName,
-                BuildRowTooltip("Preview this layout.", "layout definition"));
-            GUIStyle buttonStyle = GetConfigurationButtonStyle();
-            using (new EditorGUI.DisabledScope(!canPreview))
-            {
-                if (GUI.Button(rowRect, content, buttonStyle))
+                if (canPreview)
                     preview?.Invoke();
-            }
+            })
+            {
+                text = text,
+                tooltip = tooltip
+            };
+            RegisterRowShortcuts(button, definition, canPreview, selectSceneObjects);
+            return button;
         }
 
-        private static bool HandleRowShortcut(
-            Rect rowRect,
+        private static void StyleScreenRow(Button row)
+        {
+            row.style.height = 38f;
+            row.style.marginBottom = 3f;
+            row.style.unityFontStyleAndWeight = FontStyle.Bold;
+            row.style.unityTextAlign = TextAnchor.MiddleLeft;
+        }
+
+        private static void RegisterRowShortcuts(
+            VisualElement row,
             UnityEngine.Object definition,
             bool canSelectSceneObjects,
             Action selectSceneObjects)
         {
-            Event current = Event.current;
-            if (current.type != EventType.MouseDown || !rowRect.Contains(current.mousePosition))
-                return false;
-
-            if (current.button == 1 && definition != null)
+            row.RegisterCallback<PointerDownEvent>(evt =>
             {
-                Selection.activeObject = definition;
-                EditorGUIUtility.PingObject(definition);
-                AssetDatabase.OpenAsset(definition);
-                current.Use();
-                return true;
-            }
-
-            if (current.button == 2 && canSelectSceneObjects)
-            {
-                selectSceneObjects?.Invoke();
-                current.Use();
-                return true;
-            }
-
-            return false;
+                if (evt.button == 1 && definition != null)
+                {
+                    Selection.activeObject = definition;
+                    EditorGUIUtility.PingObject(definition);
+                    AssetDatabase.OpenAsset(definition);
+                    evt.StopImmediatePropagation();
+                }
+                else if (evt.button == 2 && canSelectSceneObjects)
+                {
+                    selectSceneObjects?.Invoke();
+                    evt.StopImmediatePropagation();
+                }
+            });
         }
 
         private static string BuildRowTooltip(string leftClickAction, string definitionName)
@@ -304,22 +273,6 @@ namespace LoogaSoft.Menu.Editor
             return $"Left-click: {leftClickAction}\n"
                    + $"Right-click: Open and ping the {definitionName}.\n"
                    + "Middle-click: Select and ping the corresponding hierarchy object(s).";
-        }
-
-        private static GUIStyle GetConfigurationButtonStyle()
-        {
-            _configurationButtonStyle ??= new GUIStyle(EditorStyles.miniButton)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                fixedWidth = 0f,
-                fixedHeight = 0f,
-                stretchWidth = true,
-                stretchHeight = true
-            };
-
-            _configurationButtonStyle.padding.left = Mathf.CeilToInt(
-                LoogaEditorStyle.Pixels(ConfigurationTextInsetPixels));
-            return _configurationButtonStyle;
         }
 
         private static int CountLayouts(LoogaMenuScreenLayout[] layouts)
@@ -342,7 +295,7 @@ namespace LoogaSoft.Menu.Editor
             _definitionsDirty = true;
             _sceneCacheDirty = true;
             EnsureCaches();
-            Repaint();
+            RefreshVisualState();
         }
 
         private void EnsureCaches()
@@ -444,41 +397,40 @@ namespace LoogaSoft.Menu.Editor
         {
             _sceneCacheDirty = true;
             _sceneObjectsByPreview.Clear();
-            Repaint();
+            EnsureCaches();
+            RefreshVisualState();
         }
 
         private void HandleProjectChanged()
         {
             _definitionsDirty = true;
             _sceneObjectsByPreview.Clear();
-            Repaint();
+            EnsureCaches();
+            RefreshVisualState();
         }
 
-        private bool DrawContextSelector()
+        private void RefreshContextField()
         {
-            if (_contexts.Count == 0)
-            {
-                EditorGUILayout.Popup(
-                    0,
-                    NoContextOption,
-                    EditorStyles.toolbarPopup,
-                    GUILayout.MinWidth(80f),
-                    GUILayout.ExpandWidth(true));
-                return false;
-            }
+            if (_contextField == null)
+                return;
 
-            int currentIndex = Mathf.Max(0, _contexts.IndexOf(_previewContext));
-            int selectedIndex = EditorGUILayout.Popup(
-                currentIndex,
-                _contextNames,
-                EditorStyles.toolbarPopup,
-                GUILayout.MinWidth(80f),
-                GUILayout.ExpandWidth(true));
-            if (selectedIndex == currentIndex)
-                return false;
+            _contextField.choices = new List<string>(_contextNames);
+            int currentIndex = _contexts.Count > 0
+                ? Mathf.Max(0, _contexts.IndexOf(_previewContext))
+                : 0;
+            _contextField.SetValueWithoutNotify(_contextNames[currentIndex]);
+            _contextField.SetEnabled(_includeSharedUi && _contexts.Count > 0);
+        }
+
+        private void HandleContextChanged(ChangeEvent<string> evt)
+        {
+            int selectedIndex = _contextField.index;
+            if (selectedIndex < 0 || selectedIndex >= _contexts.Count)
+                return;
 
             _previewContext = _contexts[selectedIndex];
-            return true;
+            _sceneObjectsByPreview.Clear();
+            ReapplyCurrentPreview();
         }
 
         private void ReapplyCurrentPreview()
