@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LoogaSoft.Menu
 {
-    [CreateAssetMenu(fileName = "New Menu Panel", menuName = "LoogaSoft/UI/Menus/Panel Definition")]
+    [CreateAssetMenu(fileName = "New Menu Panel", menuName = "LoogaSoft/UI/Menus/Panel")]
     public sealed class LoogaMenuPanelDefinition : ScriptableObject
     {
         [LoogaBoxGroup("Identity")]

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace LoogaSoft.Menu
 {
     /// <summary>Applies persistent menu-region content for one gameplay or application context.</summary>
-    [CreateAssetMenu(fileName = "New Menu Context", menuName = "LoogaSoft/UI/Menus/Context Definition")]
+    [CreateAssetMenu(fileName = "New Menu Context", menuName = "LoogaSoft/UI/Menus/Context")]
     public sealed class LoogaMenuContextDefinition : ScriptableObject
     {
         [SerializeField, TextArea] private string _description;

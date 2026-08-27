@@ -8,7 +8,7 @@ namespace LoogaSoft.Menu
     /// <summary>
     /// Defines one menu destination. A screen owns its layouts, navigation entries, and menu behavior.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Menu Screen", menuName = "LoogaSoft/UI/Menus/Screen Definition")]
+    [CreateAssetMenu(fileName = "New Menu Screen", menuName = "LoogaSoft/UI/Menus/Screen")]
     public sealed class LoogaMenuScreenDefinition : ScriptableObject
     {
         [Header("Identity")]
