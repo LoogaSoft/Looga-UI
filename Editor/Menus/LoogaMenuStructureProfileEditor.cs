@@ -91,7 +91,7 @@ namespace LoogaSoft.Menu.Editor
             SerializedProperty content = regionObject.FindProperty("_defaultContent");
             regionObject.UpdateIfRequiredOrScript();
 
-            content.isExpanded = LoogaGUILayout.FoldoutLarge(
+            content.isExpanded = LoogaGUILayout.Foldout(
                 new GUIContent(region.DisplayName),
                 content.isExpanded,
                 () =>

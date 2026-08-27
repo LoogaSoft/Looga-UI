@@ -247,7 +247,7 @@ namespace LoogaSoft.Menu.Editor
             LoogaGUILayout.PropertyField(serializedObject.FindProperty("_description"));
 
             EditorGUILayout.Space(6f);
-            _navigationExpanded = LoogaGUILayout.FoldoutLarge(
+            _navigationExpanded = LoogaGUILayout.Foldout(
                 new GUIContent(
                     "Navigation",
                     "Generate navigation directly from this screen instead of creating shared-content assets."),
@@ -262,7 +262,7 @@ namespace LoogaSoft.Menu.Editor
                         true);
                 });
 
-            _behaviorExpanded = LoogaGUILayout.FoldoutSmall(
+            _behaviorExpanded = LoogaGUILayout.Foldout(
                 "Advanced Behavior",
                 _behaviorExpanded,
                 () =>
@@ -468,7 +468,7 @@ namespace LoogaSoft.Menu.Editor
                 return;
 
             EditorGUILayout.Space(4f);
-            _selectedLayoutExpanded = LoogaGUILayout.FoldoutLarge(
+            _selectedLayoutExpanded = LoogaGUILayout.Foldout(
                 new GUIContent($"Layout Details: {_selectedLayout.name}"),
                 _selectedLayoutExpanded,
                 () =>

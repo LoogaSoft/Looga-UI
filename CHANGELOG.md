@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Updated menu editors to use the unified Looga Toolkit foldout API.
 - Cached Menu Preview definitions and scene bindings so visible preview windows no longer rescan the project and hierarchy during every GUI event.
 - Kept one-off captured element styles internal while exposing only reusable or explicitly promoted styles in the public design-system library.
 - Added loaded-scene style analysis, conservative public-style consolidation, explicit promotion, and selected-binding merge tools.

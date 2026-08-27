@@ -101,7 +101,7 @@ namespace LoogaSoft.Menu.Editor
                 expanded = false;
 
             int nextMode = mode;
-            using (LoogaEditorFoldouts.BeginLargeFoldoutLayout(
+            using (LoogaEditorFoldouts.BeginFoldoutLayout(
                 isAuthored && expanded,
                 out Rect headerRect,
                 out _))
@@ -153,7 +153,7 @@ namespace LoogaSoft.Menu.Editor
             ref bool expanded)
         {
             Event current = Event.current;
-            Rect contentRect = LoogaEditorFoldouts.GetLargeFoldoutHeaderContentRect(
+            Rect contentRect = LoogaEditorFoldouts.GetFoldoutHeaderContentRect(
                 headerRect,
                 false);
             Rect modeRect = new(
@@ -284,7 +284,7 @@ namespace LoogaSoft.Menu.Editor
 
             LoogaGUILayout.PropertyField(contentObject.FindProperty("_includeCoveredPanels"));
             SerializedProperty advanced = contentObject.FindProperty("_backBindingFallback");
-            advanced.isExpanded = LoogaGUILayout.FoldoutSmall(
+            advanced.isExpanded = LoogaGUILayout.Foldout(
                 "Advanced",
                 advanced.isExpanded,
                 () =>
