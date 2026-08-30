@@ -98,7 +98,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             return type;
         }
 
-        private static void CreateAndAssign(
+        internal static void CreateAndAssign(
             SerializedProperty property,
             Type assetType,
             LoogaDesignAsset source)

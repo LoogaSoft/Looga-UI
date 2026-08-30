@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 3.1.0 - 2026-08-30
+
+- Replaced nested Color-token references in composite styles with literal color fields.
+- Removed legacy theme color-token maps so Color tokens remain color-only binding assets.
+- Added expandable inline token editing with sub-asset-aware New and Clone actions to style bindings.
+
 ## 3.0.1 - 2026-08-30
 
 - Added color and alpha ownership to Image tokens.

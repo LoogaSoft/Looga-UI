@@ -42,7 +42,11 @@ authored visuals should share a tint without changing their sprite or other Imag
 Text and Color Only. Child icons and labels receive their own bindings so component ownership stays explicit.
 
 The **New** and **Clone** actions beside token fields create sub-assets in the active design system when it can be
-resolved unambiguously. Changing a token reapplies affected bindings in Edit Mode and at runtime.
+resolved unambiguously. Assigned tokens expand inline on `LoogaStyleBinding`, so their shared settings can be
+edited without leaving the consuming component. Changing a token reapplies affected bindings in Edit Mode and at runtime.
+
+Composite legacy styles store literal colors. They do not reference Color tokens. Use Color Only when sharing
+just a component's color is the intended styling responsibility.
 
 ### Optional R3 Support
 
