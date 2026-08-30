@@ -28,11 +28,6 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 SynchronizeStyleLibrary();
             }
 
-            if (GUILayout.Button("Rebuild and Condense Styles..."))
-            {
-                RecoverStyles();
-            }
-
             if (GUILayout.Button("Manage Sub-assets..."))
             {
                 LoogaDesignSubAssetManagerWindow.Open((LoogaDesignSystem)target);
