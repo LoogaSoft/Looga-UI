@@ -11,7 +11,6 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     [CustomPropertyDrawer(typeof(LoogaDesignAsset), true)]
     internal sealed class LoogaDesignAssetReferenceDrawer : PropertyDrawer
     {
-        private const float ButtonGap = 2f;
         private const float NewButtonWidth = 38f;
         private const float CloneButtonWidth = 45f;
 
@@ -34,7 +33,6 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             Rect contentRect = EditorGUI.PrefixLabel(position, label);
             Rect cloneRect = TakeRight(ref contentRect, CloneButtonWidth);
             Rect newRect = TakeRight(ref contentRect, NewButtonWidth);
-            contentRect.width = Mathf.Max(0f, contentRect.width - ButtonGap);
 
             EditorGUI.BeginChangeCheck();
             UnityEngine.Object value = EditorGUI.ObjectField(
@@ -75,7 +73,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private static Rect TakeRight(ref Rect available, float width)
         {
             Rect result = new Rect(available.xMax - width, available.y, width, available.height);
-            available.width -= width + ButtonGap;
+            available.width -= width;
             return result;
         }
 
