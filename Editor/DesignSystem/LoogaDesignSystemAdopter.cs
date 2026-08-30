@@ -18,6 +18,9 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     internal static class LoogaDesignSystemAdopter
     {
         internal const string DefaultOutputFolder = "Assets/Project/Databases/UI/Design System";
+        private const int MaxAssetNameLength = 60;
+        private const float SimilarColorDistance = 0.075f;
+        private const float SimilarAlphaDistance = 0.055f;
 
         private static readonly Dictionary<string, LoogaColorToken> ColorTokens =
             new Dictionary<string, LoogaColorToken>();
@@ -42,6 +45,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private static readonly Dictionary<LoogaElementStyle, int> StandaloneStyleUsage =
             new Dictionary<LoogaElementStyle, int>();
         private static readonly HashSet<Component> OwnedVisuals = new HashSet<Component>();
+        private static readonly HashSet<string> AssetNames =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static LoogaDesignSystem _designSystem;
         private static LoogaTheme _theme;
@@ -109,7 +114,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 string fingerprint = BuildControlFingerprint(control.targetGraphic, label, icon, control);
                 if (!ButtonStyles.TryGetValue(fingerprint, out LoogaButtonStyle style))
                 {
-                    style = AddAsset<LoogaButtonStyle>(NextName("Button Style", ButtonStyles.Count));
+                    style = AddAsset<LoogaButtonStyle>(BuildComponentAssetName(control, "Button Style"));
                     ConfigureStyle(style,
                         ("_button", GetElementStyle("Button", control.targetGraphic, null, control)),
                         ("_label", GetElementStyle("Button Label", label, label, null)),
@@ -134,7 +139,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 string fingerprint = BuildControlFingerprint(control.targetGraphic, control.graphic, label, control);
                 if (!ToggleStyles.TryGetValue(fingerprint, out LoogaToggleStyle style))
                 {
-                    style = AddAsset<LoogaToggleStyle>(NextName("Toggle Style", ToggleStyles.Count));
+                    style = AddAsset<LoogaToggleStyle>(BuildComponentAssetName(control, "Toggle Style"));
                     ConfigureStyle(style,
                         ("_toggle", GetElementStyle("Toggle", control.targetGraphic, null, control)),
                         ("_checkmark", GetElementStyle("Toggle Checkmark", control.graphic, null, null)),
@@ -160,7 +165,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 string fingerprint = BuildControlFingerprint(control.targetGraphic, fill, handle, control);
                 if (!SliderStyles.TryGetValue(fingerprint, out LoogaSliderStyle style))
                 {
-                    style = AddAsset<LoogaSliderStyle>(NextName("Slider Style", SliderStyles.Count));
+                    style = AddAsset<LoogaSliderStyle>(BuildComponentAssetName(control, "Slider Style"));
                     ConfigureStyle(style,
                         ("_slider", GetElementStyle("Slider", control.targetGraphic, null, control)),
                         ("_fill", GetElementStyle("Slider Fill", fill, null, null)),
@@ -185,7 +190,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 string fingerprint = BuildControlFingerprint(control.targetGraphic, handle, control);
                 if (!ScrollbarStyles.TryGetValue(fingerprint, out LoogaScrollbarStyle style))
                 {
-                    style = AddAsset<LoogaScrollbarStyle>(NextName("Scrollbar Style", ScrollbarStyles.Count));
+                    style = AddAsset<LoogaScrollbarStyle>(BuildComponentAssetName(control, "Scrollbar Style"));
                     ConfigureStyle(style,
                         ("_scrollbar", GetElementStyle("Scrollbar", control.targetGraphic, null, control)),
                         ("_handle", GetElementStyle("Scrollbar Handle", handle, null, null)));
@@ -210,7 +215,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 string fingerprint = BuildControlFingerprint(control.targetGraphic, text, placeholder, control);
                 if (!InputFieldStyles.TryGetValue(fingerprint, out LoogaInputFieldStyle style))
                 {
-                    style = AddAsset<LoogaInputFieldStyle>(NextName("Input Field Style", InputFieldStyles.Count));
+                    style = AddAsset<LoogaInputFieldStyle>(BuildComponentAssetName(control, "Input Field Style"));
                     ConfigureStyle(style,
                         ("_inputField", GetElementStyle("Input Field", control.targetGraphic, null, control)),
                         ("_text", GetElementStyle("Input Text", text, text, null)),
@@ -237,7 +242,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                     control.captionImage, arrow, control.itemText, control.itemImage, control);
                 if (!DropdownStyles.TryGetValue(fingerprint, out LoogaDropdownStyle style))
                 {
-                    style = AddAsset<LoogaDropdownStyle>(NextName("Dropdown Style", DropdownStyles.Count));
+                    style = AddAsset<LoogaDropdownStyle>(BuildComponentAssetName(control, "Dropdown Style"));
                     ConfigureStyle(style,
                         ("_dropdown", GetElementStyle("Dropdown", control.targetGraphic, null, control)),
                         ("_caption", GetElementStyle("Dropdown Caption", control.captionText, control.captionText, null)),
@@ -310,14 +315,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 return existing;
             }
 
-            LoogaElementStyle style = AddAsset<LoogaElementStyle>(NextName(role, ElementStyles.Count));
+            Component context = text != null ? text : graphic != null ? graphic : selectable;
+            LoogaElementStyle style = AddAsset<LoogaElementStyle>(
+                BuildComponentAssetName(context, $"{role} Style"));
             SerializedObject serializedStyle = new SerializedObject(style);
 
             if (graphic != null)
             {
                 Material material = GetExplicitMaterial(graphic);
                 SetBool(serializedStyle, "_graphic._enabled", true);
-                SetObject(serializedStyle, "_graphic._color", GetColorToken(graphic.color));
+                SetObject(serializedStyle, "_graphic._color", GetColorToken(graphic.color, "Surface"));
                 SetBool(serializedStyle, "_graphic._overrideMaterial", material != null);
                 SetObject(serializedStyle, "_graphic._material", material);
             }
@@ -326,7 +333,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             {
                 SetBool(serializedStyle, "_text._enabled", true);
                 SetObject(serializedStyle, "_text._typography", GetTypographyToken(text));
-                SetObject(serializedStyle, "_text._color", GetColorToken(text.color));
+                SetObject(serializedStyle, "_text._color", GetColorToken(text.color, "Text"));
                 SetBool(serializedStyle, "_text._overrideAlignment", true);
                 SetInt(serializedStyle, "_text._alignment", (int)text.alignment);
             }
@@ -336,11 +343,11 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 ColorBlock colors = selectable.colors;
                 SetBool(serializedStyle, "_selectable._enabled", true);
                 SetInt(serializedStyle, "_selectable._transition", (int)selectable.transition);
-                SetObject(serializedStyle, "_selectable._normal", GetColorToken(colors.normalColor));
-                SetObject(serializedStyle, "_selectable._highlighted", GetColorToken(colors.highlightedColor));
-                SetObject(serializedStyle, "_selectable._pressed", GetColorToken(colors.pressedColor));
-                SetObject(serializedStyle, "_selectable._selected", GetColorToken(colors.selectedColor));
-                SetObject(serializedStyle, "_selectable._disabled", GetColorToken(colors.disabledColor));
+                SetObject(serializedStyle, "_selectable._normal", GetColorToken(colors.normalColor, "Control Normal"));
+                SetObject(serializedStyle, "_selectable._highlighted", GetColorToken(colors.highlightedColor, "Control Hover"));
+                SetObject(serializedStyle, "_selectable._pressed", GetColorToken(colors.pressedColor, "Control Pressed"));
+                SetObject(serializedStyle, "_selectable._selected", GetColorToken(colors.selectedColor, "Control Selected"));
+                SetObject(serializedStyle, "_selectable._disabled", GetColorToken(colors.disabledColor, "Control Disabled"));
                 SetFloat(serializedStyle, "_selectable._colorMultiplier", colors.colorMultiplier);
                 SetFloat(serializedStyle, "_selectable._fadeDuration", colors.fadeDuration);
             }
@@ -351,15 +358,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             return style;
         }
 
-        private static LoogaColorToken GetColorToken(Color color)
+        private static LoogaColorToken GetColorToken(Color color, string role)
         {
-            string fingerprint = ColorFingerprint(color);
-            if (ColorTokens.TryGetValue(fingerprint, out LoogaColorToken existing))
+            LoogaColorToken similar = FindSimilarColorToken(color);
+            if (similar != null)
             {
-                return existing;
+                return similar;
             }
 
-            LoogaColorToken token = AddAsset<LoogaColorToken>(NextName("Color", ColorTokens.Count));
+            string fingerprint = RawColorFingerprint(color);
+            LoogaColorToken token = AddAsset<LoogaColorToken>(BuildColorTokenName(color, role));
             token.SetDefaultColor(color);
             _theme.SetColor(token, color);
             ColorTokens.Add(fingerprint, token);
@@ -374,8 +382,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 return existing;
             }
 
-            LoogaTypographyToken token = AddAsset<LoogaTypographyToken>(
-                NextName("Typography", TypographyTokens.Count));
+            LoogaTypographyToken token = AddAsset<LoogaTypographyToken>(BuildTypographyTokenName(text));
             SerializedObject serializedToken = new SerializedObject(token);
             SetObject(serializedToken, "_defaults._font", text.font);
             SetFloat(serializedToken, "_defaults._fontSize", text.fontSize);
@@ -509,10 +516,51 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private static T AddAsset<T>(string name) where T : ScriptableObject
         {
             T asset = ScriptableObject.CreateInstance<T>();
-            asset.name = name;
+            asset.name = MakeUniqueAssetName(name);
             AssetDatabase.AddObjectToAsset(asset, _designSystem);
             EditorUtility.SetDirty(asset);
             return asset;
+        }
+
+        private static string MakeUniqueAssetName(string requestedName)
+        {
+            requestedName = LimitAssetName(requestedName, MaxAssetNameLength);
+            if (AssetNames.Add(requestedName))
+            {
+                return requestedName;
+            }
+
+            for (char variant = 'B'; variant <= 'Z'; variant++)
+            {
+                string suffix = $" — Variant {variant}";
+                string candidate = $"{LimitAssetName(requestedName, MaxAssetNameLength - suffix.Length)}{suffix}";
+                if (AssetNames.Add(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            const string extendedSuffix = " — Extended";
+            string extendedName =
+                $"{LimitAssetName(requestedName, MaxAssetNameLength - extendedSuffix.Length)}{extendedSuffix}";
+            AssetNames.Add(extendedName);
+            return extendedName;
+        }
+
+        private static string LimitAssetName(string value, int maximumLength)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length <= maximumLength)
+            {
+                return value;
+            }
+
+            int cut = value.LastIndexOf(' ', maximumLength - 1, maximumLength);
+            if (cut < maximumLength / 2)
+            {
+                cut = maximumLength;
+            }
+
+            return value.Substring(0, cut).TrimEnd(' ', '/', '—');
         }
 
         private static T[] FindSceneObjects<T>() where T : Component
@@ -701,8 +749,11 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         private static string BuildTypographyFingerprint(TMP_Text text)
         {
+            string fontFamily = text.font != null ? text.font.faceInfo.familyName : string.Empty;
+            string fontFace = text.font != null ? text.font.faceInfo.styleName : string.Empty;
             return new StringBuilder()
-                .Append(text.font != null ? text.font.GetInstanceID() : 0).Append(':')
+                .Append(fontFamily).Append(':')
+                .Append(fontFace).Append(':')
                 .Append(NormalizedFloat(text.fontSize, 2)).Append(':')
                 .Append((int)text.fontStyle).Append(':')
                 .Append(NormalizedFloat(text.characterSpacing, 2)).Append(':')
@@ -714,11 +765,47 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         private static string ColorFingerprint(Color color)
         {
+            LoogaColorToken similar = FindSimilarColorToken(color);
+            return RawColorFingerprint(similar != null ? similar.DefaultColor : color);
+        }
+
+        private static string RawColorFingerprint(Color color)
+        {
             return string.Join(",",
                 NormalizedFloat(color.r, 3),
                 NormalizedFloat(color.g, 3),
                 NormalizedFloat(color.b, 3),
                 NormalizedFloat(color.a, 3));
+        }
+
+        private static LoogaColorToken FindSimilarColorToken(Color color)
+        {
+            LoogaColorToken closest = null;
+            float closestDistance = float.MaxValue;
+            foreach (LoogaColorToken token in ColorTokens.Values)
+            {
+                Color candidate = token.DefaultColor;
+                float alphaDistance = Mathf.Abs(color.a - candidate.a);
+                if (alphaDistance > SimilarAlphaDistance)
+                {
+                    continue;
+                }
+
+                float alpha = Mathf.Max(color.a, candidate.a);
+                float red = (color.r - candidate.r) * alpha;
+                float green = (color.g - candidate.g) * alpha;
+                float blue = (color.b - candidate.b) * alpha;
+                float distance = Mathf.Sqrt(red * red + green * green + blue * blue);
+                if (distance > SimilarColorDistance || distance >= closestDistance)
+                {
+                    continue;
+                }
+
+                closest = token;
+                closestDistance = distance;
+            }
+
+            return closest;
         }
 
         private static string Float(float value)
@@ -753,9 +840,104 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             return count;
         }
 
-        private static string NextName(string role, int index)
+        private static string BuildComponentAssetName(Component component, string role)
         {
-            return $"{role} {index + 1:00}";
+            if (component == null)
+            {
+                return role;
+            }
+
+            string name = CleanObjectName(component.gameObject.name);
+            Transform parent = component.transform.parent;
+            if (IsGenericObjectName(name) && parent != null)
+            {
+                name = $"{CleanObjectName(parent.gameObject.name)} {name}";
+            }
+
+            return $"{name} {role}";
+        }
+
+        private static string BuildTypographyTokenName(TMP_Text text)
+        {
+            string family = text.font != null && !string.IsNullOrWhiteSpace(text.font.faceInfo.familyName)
+                ? text.font.faceInfo.familyName
+                : text.font != null
+                    ? text.font.name
+                    : "Default";
+            string face = text.font != null && !string.IsNullOrWhiteSpace(text.font.faceInfo.styleName)
+                ? text.font.faceInfo.styleName
+                : "Regular";
+            string caseName = (text.fontStyle & FontStyles.UpperCase) != 0 ? " Uppercase" : string.Empty;
+            return $"{family} {face} {text.fontSize:0.##}{caseName}";
+        }
+
+        private static string BuildColorTokenName(Color color, string role)
+        {
+            Color.RGBToHSV(color, out float hue, out float saturation, out float value);
+            string tone;
+            if (saturation < 0.08f)
+            {
+                tone = value switch
+                {
+                    < 0.08f => "Black",
+                    < 0.3f => "Charcoal",
+                    < 0.65f => "Gray",
+                    < 0.9f => "Silver",
+                    _ => "White"
+                };
+            }
+            else
+            {
+                tone = hue switch
+                {
+                    < 0.04f => "Red",
+                    < 0.11f => "Orange",
+                    < 0.18f => "Gold",
+                    < 0.45f => "Green",
+                    < 0.56f => "Cyan",
+                    < 0.72f => "Blue",
+                    < 0.88f => "Violet",
+                    _ => "Magenta"
+                };
+            }
+
+            string strength = color.a switch
+            {
+                < 0.02f => "Transparent",
+                < 0.2f => "Ghost",
+                < 0.5f => "Subtle",
+                < 0.85f => "Muted",
+                _ => "Solid"
+            };
+            return $"{role} {strength} {tone}";
+        }
+
+        private static string CleanObjectName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "UI";
+            }
+
+            string cleaned = value.Replace("(Clone)", string.Empty).Replace("(TMP)", string.Empty).Trim();
+            while (cleaned.Length > 0 && char.IsDigit(cleaned[cleaned.Length - 1]))
+            {
+                cleaned = cleaned.Substring(0, cleaned.Length - 1).TrimEnd();
+            }
+
+            return string.IsNullOrWhiteSpace(cleaned) ? "UI" : cleaned;
+        }
+
+        private static bool IsGenericObjectName(string value)
+        {
+            return value == "UI" ||
+                   value == "Text" ||
+                   value == "Text (TMP)" ||
+                   value == "Icon" ||
+                   value == "Background" ||
+                   value == "Label" ||
+                   value == "Value" ||
+                   value == "Title";
         }
 
         private static void SetArray<T>(
@@ -866,6 +1048,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             StandaloneElementStyles.Clear();
             StandaloneStyleUsage.Clear();
             OwnedVisuals.Clear();
+            AssetNames.Clear();
             _designSystem = null;
             _theme = null;
             _assetPath = null;
