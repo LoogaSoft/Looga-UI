@@ -111,7 +111,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Graphic icon = FindAdditionalGraphic(control.transform, control.targetGraphic, label);
                 Own(control.targetGraphic, label, icon);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, label, icon, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Button",
+                    BuildControlFingerprint(control.targetGraphic, label, icon, control));
                 if (!ButtonStyles.TryGetValue(fingerprint, out LoogaButtonStyle style))
                 {
                     style = AddAsset<LoogaButtonStyle>(BuildComponentAssetName(control, "Button Style"));
@@ -136,7 +139,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 TMP_Text label = control.GetComponentInChildren<TMP_Text>(true);
                 Own(control.targetGraphic, control.graphic, label);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, control.graphic, label, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Toggle",
+                    BuildControlFingerprint(control.targetGraphic, control.graphic, label, control));
                 if (!ToggleStyles.TryGetValue(fingerprint, out LoogaToggleStyle style))
                 {
                     style = AddAsset<LoogaToggleStyle>(BuildComponentAssetName(control, "Toggle Style"));
@@ -162,7 +168,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Graphic handle = GetGraphic(control.handleRect);
                 Own(control.targetGraphic, fill, handle);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, fill, handle, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Slider",
+                    BuildControlFingerprint(control.targetGraphic, fill, handle, control));
                 if (!SliderStyles.TryGetValue(fingerprint, out LoogaSliderStyle style))
                 {
                     style = AddAsset<LoogaSliderStyle>(BuildComponentAssetName(control, "Slider Style"));
@@ -187,7 +196,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Graphic handle = GetGraphic(control.handleRect);
                 Own(control.targetGraphic, handle);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, handle, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Scrollbar",
+                    BuildControlFingerprint(control.targetGraphic, handle, control));
                 if (!ScrollbarStyles.TryGetValue(fingerprint, out LoogaScrollbarStyle style))
                 {
                     style = AddAsset<LoogaScrollbarStyle>(BuildComponentAssetName(control, "Scrollbar Style"));
@@ -212,7 +224,10 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 TMP_Text placeholder = control.placeholder as TMP_Text;
                 Own(control.targetGraphic, text, placeholder);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, text, placeholder, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Input Field",
+                    BuildControlFingerprint(control.targetGraphic, text, placeholder, control));
                 if (!InputFieldStyles.TryGetValue(fingerprint, out LoogaInputFieldStyle style))
                 {
                     style = AddAsset<LoogaInputFieldStyle>(BuildComponentAssetName(control, "Input Field Style"));
@@ -238,8 +253,11 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 Own(control.targetGraphic, control.captionText, control.captionImage, arrow,
                     control.itemText, control.itemImage);
 
-                string fingerprint = BuildControlFingerprint(control.targetGraphic, control.captionText,
-                    control.captionImage, arrow, control.itemText, control.itemImage, control);
+                string fingerprint = BuildSemanticFingerprint(
+                    control,
+                    "Dropdown",
+                    BuildControlFingerprint(control.targetGraphic, control.captionText,
+                        control.captionImage, arrow, control.itemText, control.itemImage, control));
                 if (!DropdownStyles.TryGetValue(fingerprint, out LoogaDropdownStyle style))
                 {
                     style = AddAsset<LoogaDropdownStyle>(BuildComponentAssetName(control, "Dropdown Style"));
@@ -309,13 +327,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 return null;
             }
 
-            string fingerprint = BuildElementFingerprint(graphic, text, selectable);
+            Component context = text != null ? text : graphic != null ? graphic : selectable;
+            string fingerprint = BuildSemanticFingerprint(
+                context,
+                role,
+                BuildElementFingerprint(graphic, text, selectable));
             if (ElementStyles.TryGetValue(fingerprint, out LoogaElementStyle existing))
             {
                 return existing;
             }
 
-            Component context = text != null ? text : graphic != null ? graphic : selectable;
             LoogaElementStyle style = AddAsset<LoogaElementStyle>(
                 BuildComponentAssetName(context, $"{role} Style"));
             SerializedObject serializedStyle = new SerializedObject(style);
@@ -745,6 +766,33 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
 
             return builder.ToString();
+        }
+
+        private static string BuildSemanticFingerprint(
+            Component component,
+            string role,
+            string appearanceFingerprint)
+        {
+            return $"{BuildComponentSemanticKey(component, role)}|{appearanceFingerprint}";
+        }
+
+        private static string BuildComponentSemanticKey(Component component, string role)
+        {
+            if (component == null)
+            {
+                return role;
+            }
+
+            List<string> segments = new List<string>();
+            Transform current = component.transform;
+            while (current != null && segments.Count < 3)
+            {
+                segments.Add(CleanObjectName(current.gameObject.name));
+                current = current.parent;
+            }
+
+            segments.Reverse();
+            return $"{role}:{string.Join("/", segments)}";
         }
 
         private static string BuildTypographyFingerprint(TMP_Text text)
