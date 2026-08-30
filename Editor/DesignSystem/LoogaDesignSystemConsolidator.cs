@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LoogaSoft.UI.Controls;
 using LoogaSoft.UI.Design;
 using UnityEditor;
 using UnityEngine;
@@ -83,6 +84,81 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             List<LoogaElementStyle> ordered = new List<LoogaElementStyle>(publicStyles);
             ordered.Sort((left, right) => string.CompareOrdinal(left.name, right.name));
             SetPublicStyles(designSystem, ordered);
+        }
+
+        internal static SynchronizationReport Synchronize(LoogaDesignSystem designSystem)
+        {
+            HashSet<LoogaElementStyle> elementStyles = new HashSet<LoogaElementStyle>();
+            HashSet<LoogaButtonStyle> buttonStyles = new HashSet<LoogaButtonStyle>();
+            HashSet<LoogaToggleStyle> toggleStyles = new HashSet<LoogaToggleStyle>();
+            HashSet<LoogaSliderStyle> sliderStyles = new HashSet<LoogaSliderStyle>();
+            HashSet<LoogaScrollbarStyle> scrollbarStyles = new HashSet<LoogaScrollbarStyle>();
+            HashSet<LoogaInputFieldStyle> inputFieldStyles = new HashSet<LoogaInputFieldStyle>();
+            HashSet<LoogaDropdownStyle> dropdownStyles = new HashSet<LoogaDropdownStyle>();
+
+            int removedEntries = 0;
+            removedEntries += AddExisting(designSystem.Styles, elementStyles);
+            removedEntries += AddExisting(designSystem.ButtonStyles, buttonStyles);
+            removedEntries += AddExisting(designSystem.ToggleStyles, toggleStyles);
+            removedEntries += AddExisting(designSystem.SliderStyles, sliderStyles);
+            removedEntries += AddExisting(designSystem.ScrollbarStyles, scrollbarStyles);
+            removedEntries += AddExisting(designSystem.InputFieldStyles, inputFieldStyles);
+            removedEntries += AddExisting(designSystem.DropdownStyles, dropdownStyles);
+
+            int originalCount = CountAllStyles(
+                elementStyles,
+                buttonStyles,
+                toggleStyles,
+                sliderStyles,
+                scrollbarStyles,
+                inputFieldStyles,
+                dropdownStyles);
+
+            AddContainedStyles(
+                designSystem,
+                elementStyles,
+                buttonStyles,
+                toggleStyles,
+                sliderStyles,
+                scrollbarStyles,
+                inputFieldStyles,
+                dropdownStyles);
+            AddLoadedStyles(
+                designSystem,
+                elementStyles,
+                buttonStyles,
+                toggleStyles,
+                sliderStyles,
+                scrollbarStyles,
+                inputFieldStyles,
+                dropdownStyles);
+
+            int synchronizedCount = CountAllStyles(
+                elementStyles,
+                buttonStyles,
+                toggleStyles,
+                sliderStyles,
+                scrollbarStyles,
+                inputFieldStyles,
+                dropdownStyles);
+
+            SerializedObject serializedSystem = new SerializedObject(designSystem);
+            Undo.RecordObject(designSystem, "Synchronize UI Style Library");
+            SetList(serializedSystem, "_styles", elementStyles);
+            SetList(serializedSystem, "_buttonStyles", buttonStyles);
+            SetList(serializedSystem, "_toggleStyles", toggleStyles);
+            SetList(serializedSystem, "_sliderStyles", sliderStyles);
+            SetList(serializedSystem, "_scrollbarStyles", scrollbarStyles);
+            SetList(serializedSystem, "_inputFieldStyles", inputFieldStyles);
+            SetList(serializedSystem, "_dropdownStyles", dropdownStyles);
+            serializedSystem.ApplyModifiedProperties();
+            EditorUtility.SetDirty(designSystem);
+            AssetDatabase.SaveAssets();
+
+            return new SynchronizationReport(
+                synchronizedCount,
+                synchronizedCount - originalCount,
+                removedEntries);
         }
 
         internal static void MergeSelectionInto(LoogaElementStyle target)
@@ -173,6 +249,187 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             return count;
         }
 
+        private static int AddExisting<T>(IReadOnlyList<T> source, HashSet<T> destination)
+            where T : UnityEngine.Object
+        {
+            int removedEntries = 0;
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i] == null || !destination.Add(source[i]))
+                {
+                    removedEntries++;
+                }
+            }
+
+            return removedEntries;
+        }
+
+        private static int CountAllStyles(
+            HashSet<LoogaElementStyle> elementStyles,
+            HashSet<LoogaButtonStyle> buttonStyles,
+            HashSet<LoogaToggleStyle> toggleStyles,
+            HashSet<LoogaSliderStyle> sliderStyles,
+            HashSet<LoogaScrollbarStyle> scrollbarStyles,
+            HashSet<LoogaInputFieldStyle> inputFieldStyles,
+            HashSet<LoogaDropdownStyle> dropdownStyles)
+        {
+            return elementStyles.Count +
+                   buttonStyles.Count +
+                   toggleStyles.Count +
+                   sliderStyles.Count +
+                   scrollbarStyles.Count +
+                   inputFieldStyles.Count +
+                   dropdownStyles.Count;
+        }
+
+        private static void AddContainedStyles(
+            LoogaDesignSystem designSystem,
+            HashSet<LoogaElementStyle> elementStyles,
+            HashSet<LoogaButtonStyle> buttonStyles,
+            HashSet<LoogaToggleStyle> toggleStyles,
+            HashSet<LoogaSliderStyle> sliderStyles,
+            HashSet<LoogaScrollbarStyle> scrollbarStyles,
+            HashSet<LoogaInputFieldStyle> inputFieldStyles,
+            HashSet<LoogaDropdownStyle> dropdownStyles)
+        {
+            string path = AssetDatabase.GetAssetPath(designSystem);
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+            for (int i = 0; i < assets.Length; i++)
+            {
+                switch (assets[i])
+                {
+                    case LoogaElementStyle elementStyle when elementStyle.KeepPublic:
+                        elementStyles.Add(elementStyle);
+                        break;
+                    case LoogaButtonStyle buttonStyle:
+                        buttonStyles.Add(buttonStyle);
+                        break;
+                    case LoogaToggleStyle toggleStyle:
+                        toggleStyles.Add(toggleStyle);
+                        break;
+                    case LoogaSliderStyle sliderStyle:
+                        sliderStyles.Add(sliderStyle);
+                        break;
+                    case LoogaScrollbarStyle scrollbarStyle:
+                        scrollbarStyles.Add(scrollbarStyle);
+                        break;
+                    case LoogaInputFieldStyle inputFieldStyle:
+                        inputFieldStyles.Add(inputFieldStyle);
+                        break;
+                    case LoogaDropdownStyle dropdownStyle:
+                        dropdownStyles.Add(dropdownStyle);
+                        break;
+                }
+            }
+        }
+
+        private static void AddLoadedStyles(
+            LoogaDesignSystem designSystem,
+            HashSet<LoogaElementStyle> elementStyles,
+            HashSet<LoogaButtonStyle> buttonStyles,
+            HashSet<LoogaToggleStyle> toggleStyles,
+            HashSet<LoogaSliderStyle> sliderStyles,
+            HashSet<LoogaScrollbarStyle> scrollbarStyles,
+            HashSet<LoogaInputFieldStyle> inputFieldStyles,
+            HashSet<LoogaDropdownStyle> dropdownStyles)
+        {
+            AddBindingStyles(designSystem, elementStyles);
+            AddControlStyles<LoogaButton, LoogaButtonStyle>(
+                designSystem,
+                buttonStyles,
+                control => control.StyleSource,
+                control => control.Style);
+            AddControlStyles<LoogaToggle, LoogaToggleStyle>(
+                designSystem,
+                toggleStyles,
+                control => control.StyleSource,
+                control => control.Style);
+            AddControlStyles<LoogaSlider, LoogaSliderStyle>(
+                designSystem,
+                sliderStyles,
+                control => control.StyleSource,
+                control => control.Style);
+            AddControlStyles<LoogaScrollbar, LoogaScrollbarStyle>(
+                designSystem,
+                scrollbarStyles,
+                control => control.StyleSource,
+                control => control.Style);
+            AddControlStyles<LoogaInputField, LoogaInputFieldStyle>(
+                designSystem,
+                inputFieldStyles,
+                control => control.StyleSource,
+                control => control.Style);
+            AddControlStyles<LoogaDropdown, LoogaDropdownStyle>(
+                designSystem,
+                dropdownStyles,
+                control => control.StyleSource,
+                control => control.Style);
+        }
+
+        private static void AddBindingStyles(
+            LoogaDesignSystem designSystem,
+            HashSet<LoogaElementStyle> styles)
+        {
+            LoogaStyleBinding[] bindings = UnityEngine.Object.FindObjectsByType<LoogaStyleBinding>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                LoogaThemeScope scope = LoogaThemeScope.FindNearest(bindings[i].transform);
+                if (bindings[i].Style != null && scope?.DesignSystem == designSystem)
+                {
+                    styles.Add(bindings[i].Style);
+                }
+            }
+        }
+
+        private static void AddControlStyles<TControl, TStyle>(
+            LoogaDesignSystem designSystem,
+            HashSet<TStyle> styles,
+            System.Func<TControl, LoogaControlStyleSource> getSource,
+            System.Func<TControl, TStyle> getStyle)
+            where TControl : Component
+            where TStyle : UnityEngine.Object
+        {
+            TControl[] controls = UnityEngine.Object.FindObjectsByType<TControl>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            for (int i = 0; i < controls.Length; i++)
+            {
+                TStyle style = getStyle(controls[i]);
+                if (style != null && UsesDesignSystem(controls[i].transform, getSource(controls[i]), designSystem))
+                {
+                    styles.Add(style);
+                }
+            }
+        }
+
+        private static bool UsesDesignSystem(
+            Transform transform,
+            LoogaControlStyleSource source,
+            LoogaDesignSystem designSystem)
+        {
+            LoogaThemeScope scope = LoogaThemeScope.FindNearest(transform);
+            return source == LoogaControlStyleSource.DesignSystem && scope?.DesignSystem == designSystem;
+        }
+
+        private static void SetList<T>(
+            SerializedObject serializedSystem,
+            string propertyName,
+            HashSet<T> styles)
+            where T : UnityEngine.Object
+        {
+            List<T> ordered = new List<T>(styles);
+            ordered.Sort((left, right) => string.CompareOrdinal(left.name, right.name));
+
+            SerializedProperty property = serializedSystem.FindProperty(propertyName);
+            property.arraySize = ordered.Count;
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                property.GetArrayElementAtIndex(i).objectReferenceValue = ordered[i];
+            }
+        }
+
         private static void SetKeepPublic(LoogaElementStyle style, bool value)
         {
             SerializedObject serializedStyle = new SerializedObject(style);
@@ -217,6 +474,20 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             internal int PublicStyles { get; }
             internal int CapturedStyles { get; }
             internal int ReusableCapturedStyles { get; }
+        }
+
+        internal readonly struct SynchronizationReport
+        {
+            internal SynchronizationReport(int registeredStyles, int addedStyles, int removedEntries)
+            {
+                RegisteredStyles = registeredStyles;
+                AddedStyles = addedStyles;
+                RemovedEntries = removedEntries;
+            }
+
+            internal int RegisteredStyles { get; }
+            internal int AddedStyles { get; }
+            internal int RemovedEntries { get; }
         }
     }
 }

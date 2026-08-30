@@ -8,15 +8,45 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     [CustomEditor(typeof(LoogaDesignSystem))]
     public sealed class LoogaDesignSystemEditor : UnityEditor.Editor
     {
+        private string _synchronizationSummary;
+
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField("Design System Tools", EditorStyles.boldLabel);
+            if (GUILayout.Button("Synchronize Style Library"))
+            {
+                SynchronizeStyleLibrary();
+            }
+
+            if (GUILayout.Button("Manage Sub-assets..."))
+            {
+                LoogaDesignSubAssetManagerWindow.Open((LoogaDesignSystem)target);
+            }
+
+            if (!string.IsNullOrEmpty(_synchronizationSummary))
+            {
+                EditorGUILayout.HelpBox(_synchronizationSummary, MessageType.Info);
+            }
+
             EditorGUILayout.Space();
 
             if (GUILayout.Button("Apply To Open Scenes"))
             {
                 ApplyOpenSceneBindings();
             }
+        }
+
+        private void SynchronizeStyleLibrary()
+        {
+            LoogaDesignSystemConsolidator.SynchronizationReport report =
+                LoogaDesignSystemConsolidator.Synchronize((LoogaDesignSystem)target);
+            _synchronizationSummary =
+                $"Registered {report.RegisteredStyles} style(s). " +
+                $"Added {report.AddedStyles} and removed {report.RemovedEntries} null or duplicate entries.";
+            serializedObject.Update();
         }
 
         private static void ApplyOpenSceneBindings()
