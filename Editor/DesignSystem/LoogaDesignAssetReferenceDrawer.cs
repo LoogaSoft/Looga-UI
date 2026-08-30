@@ -126,6 +126,13 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             EditorUtility.SetDirty(property.serializedObject.targetObject);
             EditorUtility.SetDirty(created);
             AssetDatabase.SaveAssets();
+
+            UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(
+                AssetDatabase.GetAssetPath(created));
+            if (mainAsset is LoogaDesignSystem designSystem)
+            {
+                LoogaDesignSystemConsolidator.Synchronize(designSystem);
+            }
         }
 
         private static bool TryStoreAsset(

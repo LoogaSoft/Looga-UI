@@ -5,58 +5,71 @@ using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Design
 {
-    /// <summary>Applies one semantic style to UGUI components on this GameObject.</summary>
+    /// <summary>Applies direct design tokens to Unity UI components on one GameObject.</summary>
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("LoogaSoft/UI/Design System/Style Binding")]
     public sealed class LoogaStyleBinding : MonoBehaviour
     {
-        [SerializeField] private LoogaElementStyle _style;
+        [Header("Tokens")]
+        [SerializeField] private LoogaColorToken _color;
+        [SerializeField] private LoogaButtonColorToken _buttonColors;
+        [SerializeField] private LoogaImageToken _image;
+        [SerializeField] private LoogaTextToken _text;
+
+        [Header("Targets")]
         [SerializeField] private bool _resolveTargetsAutomatically = true;
-        [SerializeField] private Graphic _graphic;
-        [SerializeField] private TMP_Text _text;
-        [SerializeField] private Selectable _selectable;
+        [SerializeField] private Graphic _graphicTarget;
+        [SerializeField] private Button _buttonTarget;
+        [SerializeField] private Image _imageTarget;
+        [SerializeField] private TMP_Text _textTarget;
 
-        private LoogaThemeScope _scope;
-
-        /// <summary>Occurs after this binding applies its style.</summary>
+        /// <summary>Occurs after this binding applies its tokens.</summary>
         public event Action StyleApplied;
 
-        /// <summary>Gets the assigned semantic style.</summary>
-        public LoogaElementStyle Style => _style;
+        /// <summary>Gets the assigned generic color token.</summary>
+        public LoogaColorToken Color => _color;
 
-        /// <summary>Gets the theme resolved from the nearest scope.</summary>
-        public LoogaTheme ActiveTheme => _scope != null ? _scope.ActiveTheme : null;
+        /// <summary>Gets the assigned button color token.</summary>
+        public LoogaButtonColorToken ButtonColors => _buttonColors;
 
-        /// <summary>Assigns and applies a semantic style.</summary>
-        public void SetStyle(LoogaElementStyle style)
-        {
-            if (_style == style)
-            {
-                return;
-            }
+        /// <summary>Gets the assigned image token.</summary>
+        public LoogaImageToken Image => _image;
 
-            _style = style;
-            ApplyStyle();
-        }
+        /// <summary>Gets the assigned TextMeshPro token.</summary>
+        public LoogaTextToken Text => _text;
 
-        /// <summary>Applies the assigned style to this GameObject.</summary>
+        /// <summary>Applies every assigned token to its compatible target.</summary>
         public void ApplyStyle()
         {
-            RefreshScope();
-
             if (_resolveTargetsAutomatically)
             {
                 ResolveTargets();
             }
 
-            if (_style == null)
+            if (_color != null && _graphicTarget != null)
             {
-                return;
+                _graphicTarget.color = _color.DefaultColor;
             }
 
-            _style.Apply(ActiveTheme, _graphic, _text, _selectable);
+            _buttonColors?.Apply(_buttonTarget);
+            _image?.Apply(_imageTarget);
+            _text?.Apply(_textTarget);
             StyleApplied?.Invoke();
+        }
+
+        /// <summary>Resolves compatible Unity UI targets on this GameObject.</summary>
+        public void ResolveTargets()
+        {
+            TryGetComponent(out _buttonTarget);
+            TryGetComponent(out _imageTarget);
+            TryGetComponent(out _textTarget);
+
+            _graphicTarget = _textTarget != null
+                ? _textTarget
+                : _imageTarget != null
+                    ? _imageTarget
+                    : GetComponent<Graphic>();
         }
 
         private void OnEnable()
@@ -67,13 +80,7 @@ namespace LoogaSoft.UI.Design
 
         private void OnDisable()
         {
-            Unsubscribe();
-            _scope = null;
-        }
-
-        private void OnTransformParentChanged()
-        {
-            ApplyStyle();
+            LoogaDesignSystemEvents.Changed -= HandleDesignChanged;
         }
 
         private void OnValidate()
@@ -84,75 +91,15 @@ namespace LoogaSoft.UI.Design
             }
         }
 
-        private void ResolveTargets()
-        {
-            if (_graphic == null)
-            {
-                TryGetComponent(out _graphic);
-            }
-
-            if (_text == null)
-            {
-                TryGetComponent(out _text);
-            }
-
-            if (_selectable == null)
-            {
-                TryGetComponent(out _selectable);
-            }
-        }
-
-        private void RefreshScope()
-        {
-            LoogaThemeScope resolvedScope = LoogaThemeScope.FindNearest(transform);
-
-            if (_scope == resolvedScope)
-            {
-                return;
-            }
-
-            UnsubscribeFromScope();
-            _scope = resolvedScope;
-
-            if (isActiveAndEnabled)
-            {
-                SubscribeToScope();
-            }
-        }
-
-        private void Unsubscribe()
-        {
-            LoogaDesignSystemEvents.Changed -= HandleDesignChanged;
-            UnsubscribeFromScope();
-        }
-
-        private void SubscribeToScope()
-        {
-            if (_scope != null)
-            {
-                _scope.ThemeChanged += HandleThemeChanged;
-            }
-        }
-
-        private void UnsubscribeFromScope()
-        {
-            if (_scope != null)
-            {
-                _scope.ThemeChanged -= HandleThemeChanged;
-            }
-        }
-
         private void HandleDesignChanged(LoogaDesignSystemChange change)
         {
-            if (_style != null && _style.Uses(change.Source))
+            if (change.Source == _color ||
+                change.Source == _buttonColors ||
+                change.Source == _image ||
+                change.Source == _text)
             {
                 ApplyStyle();
             }
-        }
-
-        private void HandleThemeChanged(LoogaTheme theme)
-        {
-            ApplyStyle();
         }
     }
 }

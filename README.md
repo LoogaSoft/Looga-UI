@@ -17,66 +17,37 @@ See [Menus](Documentation~/Menus.md) for setup and authoring guidance.
 
 ## Design System
 
-The design system separates semantic UI intent from scene-authored colors, fonts, and interaction states.
+The design system stores reusable UGUI and TextMeshPro component settings as direct tokens.
 Its core uses normal C# events and Unity lifecycle callbacks. It does not poll and does not require R3.
 
 ### Core Assets
 
-- `LoogaDesignSystem` identifies the default theme and the element styles used by one product.
-- `LoogaTheme` maps typed color and typography tokens to one visual theme.
-- `LoogaColorToken` and `LoogaTypographyToken` define semantic roles such as primary text, surface, accent, heading, and caption.
-- `LoogaElementStyle` combines optional graphic, TextMeshPro, and Selectable settings into one reusable recipe.
-- `LoogaThemeScope` selects a design system or local theme override for one UI hierarchy.
-- `LoogaStyleBinding` applies one element style to the UGUI/TMP components on its GameObject.
-- `LoogaButton`, `LoogaToggle`, `LoogaSlider`, and `LoogaScrollbar` replace their Unity UI counterparts while retaining Unity behavior and serialization.
-- `LoogaInputField` and `LoogaDropdown` replace their TextMeshPro counterparts in the same way.
-- Typed control-style assets group each control's visual roles into one reusable recipe.
+- `LoogaColorToken` defines one reusable color for any `Graphic` or TextMeshPro component.
+- `LoogaButtonColorToken` defines normal, highlighted, pressed, selected, and disabled Unity UI button colors.
+- `LoogaImageToken` defines an Image sprite, material, type, pixels-per-unit multiplier, and type-specific fill settings.
+- `LoogaTextToken` defines TextMeshPro font settings without changing alignment, color, wrapping, or layout intent.
+- `LoogaDesignSystem` registers those four token families for one product.
+- `LoogaStyleBinding` assigns any compatible combination of tokens to components on its GameObject.
+- Looga control components retain Unity and TextMeshPro behavior and serialization. Their appearance stays in the normal control fields unless a `LoogaStyleBinding` applies tokens.
 
 ### Recommended Setup
 
-For an existing authored UI, load its scenes and open `LoogaSoft > UI > Design System`. Select
-**Create Design System From Loaded UI**. Looga UI then:
+Create a `LoogaDesignSystem`, then use its inspector to create Color, Button Colors, Image, and Text sub-assets.
+The inspector synchronizes the four registered lists with supported token sub-assets stored in the same asset.
+Use **Manage Token Sub-assets** to search and rename them.
 
-1. Captures the current appearance without changing it.
-2. Groups exact visual matches into shared element and control styles.
-3. Creates reusable color and typography tokens.
-4. Creates one default theme and design-system asset.
-5. Adds a theme scope to each root Canvas.
-6. Assigns the generated styles to controls and remaining visual elements.
+Add `LoogaStyleBinding` to each visual that should use shared styling. Assign only the tokens that apply to that
+GameObject. A button background can use Button Colors, Image, and Color together. A label normally uses Text and
+Color. Child icons and labels receive their own bindings so component ownership stays explicit.
 
-The generated assets live under `Assets/Project/Databases/UI/Design System` by default. Captured one-off styles
-remain internal sub-assets so every binding preserves its authored appearance without crowding the public library.
-Styles reused by multiple objects are exposed automatically. Use the **Style Library** tools to analyze loaded UI,
-promote an intentional one-off style, merge selected bindings into one semantic style, or consolidate the public
-list after changing the reuse threshold.
-
-For a new UI without authored visuals, create tokens, a theme, element styles, and typed control styles under
-`Create > LoogaSoft > UI > Design System`. Add `LoogaThemeScope` to the stable UI root, then assign styles as
-the interface is authored.
-
-Use the Looga control components when a control needs one clear appearance owner. In **Design System** mode,
-the assigned typed style controls appearance and the inspector hides local transition settings. In **Local**
-mode, the normal Unity or TextMeshPro appearance settings remain available. Existing controls can be converted
-in place from their component context menu or with `GameObject > LoogaSoft > UI > Convert Selected Controls`.
-Conversion preserves the component identity, references, events, values, and navigation settings. Converted
-controls start in Local mode so adopting Looga UI does not silently change their appearance.
-
-To migrate an authored UI scene at once, load the scene and use
-`LoogaSoft > UI > Controls > Convert Loaded Scene Controls`. The command scans every loaded scene, includes
-inactive objects, previews the number of each control type, and converts the full batch. It does not modify
-prefab assets or guess semantic styles.
-
-Unity cannot undo a component script-type conversion. Save or commit the scene before running the conversion.
-The converter retains component identity so serialized references and UnityEvents remain connected.
-
-Changing a theme, token, or element style reapplies affected bindings in Edit Mode and at runtime.
-Nested scopes can replace the active theme for a menu, faction, event, or accessibility context.
+The **New** and **Clone** actions beside token fields create sub-assets in the active design system when it can be
+resolved unambiguously. Changing a token reapplies affected bindings in Edit Mode and at runtime.
 
 ### Optional R3 Support
 
-Enable R3 for Looga UI in `LoogaSoft > Package Support` when the project needs to compose style changes with other reactive state.
-The adapter exposes the design change stream, active scope theme, and style-application events as observables.
-Normal bindings remain event-driven and do not need one subscription per token.
+Enable R3 for Looga UI in `LoogaSoft > Package Support` when the project needs to compose design changes with
+other reactive state. The adapter exposes design changes and binding-application events as observables. Normal
+bindings remain event-driven and do not need one subscription per token.
 
 ## Layout
 

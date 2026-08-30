@@ -6,7 +6,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable toggle style.</summary>
-    [CreateAssetMenu(fileName = "New Toggle Style", menuName = "LoogaSoft/UI/Design System/Toggle Style")]
     public sealed class LoogaToggleStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _toggle;

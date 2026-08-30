@@ -4,7 +4,6 @@ using UnityEngine;
 namespace LoogaSoft.UI.Design
 {
     /// <summary>Overrides semantic token values for one visual theme.</summary>
-    [CreateAssetMenu(fileName = "New UI Theme", menuName = "LoogaSoft/UI/Design System/Theme")]
     public sealed class LoogaTheme : LoogaDesignAsset
     {
         [SerializeField] private List<LoogaColorTokenValue> _colors = new List<LoogaColorTokenValue>();

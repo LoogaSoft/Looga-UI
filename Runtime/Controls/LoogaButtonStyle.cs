@@ -6,7 +6,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable button style.</summary>
-    [CreateAssetMenu(fileName = "New Button Style", menuName = "LoogaSoft/UI/Design System/Button Style")]
     public sealed class LoogaButtonStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _button;

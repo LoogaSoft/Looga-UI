@@ -1,44 +1,27 @@
 using System.Collections.Generic;
-using LoogaSoft.UI.Controls;
 using UnityEngine;
 
 namespace LoogaSoft.UI.Design
 {
-    /// <summary>Collects the default theme and semantic styles for one product.</summary>
+    /// <summary>Collects the reusable visual tokens for one product.</summary>
     [CreateAssetMenu(fileName = "UI Design System", menuName = "LoogaSoft/UI/Design System/Design System")]
     public sealed class LoogaDesignSystem : LoogaDesignAsset
     {
-        [SerializeField] private LoogaTheme _defaultTheme;
-        [SerializeField] private List<LoogaElementStyle> _styles = new List<LoogaElementStyle>();
-        [SerializeField] private List<LoogaButtonStyle> _buttonStyles = new List<LoogaButtonStyle>();
-        [SerializeField] private List<LoogaToggleStyle> _toggleStyles = new List<LoogaToggleStyle>();
-        [SerializeField] private List<LoogaSliderStyle> _sliderStyles = new List<LoogaSliderStyle>();
-        [SerializeField] private List<LoogaScrollbarStyle> _scrollbarStyles = new List<LoogaScrollbarStyle>();
-        [SerializeField] private List<LoogaInputFieldStyle> _inputFieldStyles = new List<LoogaInputFieldStyle>();
-        [SerializeField] private List<LoogaDropdownStyle> _dropdownStyles = new List<LoogaDropdownStyle>();
+        [SerializeField] private List<LoogaColorToken> _colors = new();
+        [SerializeField] private List<LoogaButtonColorToken> _buttonColors = new();
+        [SerializeField] private List<LoogaImageToken> _images = new();
+        [SerializeField] private List<LoogaTextToken> _texts = new();
 
-        /// <summary>Gets the default theme.</summary>
-        public LoogaTheme DefaultTheme => _defaultTheme;
+        /// <summary>Gets the registered graphic and text colors.</summary>
+        public IReadOnlyList<LoogaColorToken> Colors => _colors;
 
-        /// <summary>Gets the semantic styles registered for this product.</summary>
-        public IReadOnlyList<LoogaElementStyle> Styles => _styles;
+        /// <summary>Gets the registered Unity UI button color states.</summary>
+        public IReadOnlyList<LoogaButtonColorToken> ButtonColors => _buttonColors;
 
-        /// <summary>Gets the button styles registered for this product.</summary>
-        public IReadOnlyList<LoogaButtonStyle> ButtonStyles => _buttonStyles;
+        /// <summary>Gets the registered Unity UI Image settings.</summary>
+        public IReadOnlyList<LoogaImageToken> Images => _images;
 
-        /// <summary>Gets the toggle styles registered for this product.</summary>
-        public IReadOnlyList<LoogaToggleStyle> ToggleStyles => _toggleStyles;
-
-        /// <summary>Gets the slider styles registered for this product.</summary>
-        public IReadOnlyList<LoogaSliderStyle> SliderStyles => _sliderStyles;
-
-        /// <summary>Gets the scrollbar styles registered for this product.</summary>
-        public IReadOnlyList<LoogaScrollbarStyle> ScrollbarStyles => _scrollbarStyles;
-
-        /// <summary>Gets the input-field styles registered for this product.</summary>
-        public IReadOnlyList<LoogaInputFieldStyle> InputFieldStyles => _inputFieldStyles;
-
-        /// <summary>Gets the dropdown styles registered for this product.</summary>
-        public IReadOnlyList<LoogaDropdownStyle> DropdownStyles => _dropdownStyles;
+        /// <summary>Gets the registered TextMeshPro settings.</summary>
+        public IReadOnlyList<LoogaTextToken> Texts => _texts;
     }
 }

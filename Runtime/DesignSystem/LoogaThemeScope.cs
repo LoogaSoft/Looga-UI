@@ -27,11 +27,9 @@ namespace LoogaSoft.UI.Design
         /// <summary>Gets the active theme resolved by this scope.</summary>
         public LoogaTheme ActiveTheme => _themeOverride != null
             ? _themeOverride
-            : _designSystem != null
-                ? _designSystem.DefaultTheme
-                : _parentScope != null
-                    ? _parentScope.ActiveTheme
-                    : null;
+            : _parentScope != null
+                ? _parentScope.ActiveTheme
+                : null;
 
         /// <summary>Finds the nearest theme scope at or above the supplied transform.</summary>
         public static LoogaThemeScope FindNearest(Transform source)

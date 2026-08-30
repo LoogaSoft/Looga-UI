@@ -5,7 +5,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Design
 {
     /// <summary>Defines reusable visual settings for one semantic UI role.</summary>
-    [CreateAssetMenu(fileName = "New Element Style", menuName = "LoogaSoft/UI/Design System/Element Style")]
     public sealed class LoogaElementStyle : LoogaDesignAsset
     {
         [SerializeField, Tooltip("Keep this style in the public design-system library even when only one object uses it.")]

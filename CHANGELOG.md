@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 3.0.0 - 2026-08-30
+
+- Replaced composite element and typed-control style registration with four direct token families: color, button colors, image, and TextMeshPro text.
+- Changed `LoogaStyleBinding` to apply compatible tokens directly without overriding TextMeshPro alignment.
+- Added full Unity UI Image settings and Unity UI button state colors as reusable design assets.
+- Simplified Looga controls to use their serialized Unity appearance plus optional token bindings.
+- Replaced design-system adoption and consolidation tools with focused token creation, synchronization, renaming, and scene reapplication.
 - Updated menu editors to use the unified Looga Toolkit foldout API.
 - Cached Menu Preview definitions and scene bindings so visible preview windows no longer rescan the project and hierarchy during every GUI event.
 - Kept one-off captured element styles internal while exposing only reusable or explicitly promoted styles in the public design-system library.

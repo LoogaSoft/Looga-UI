@@ -5,7 +5,6 @@ using UnityEngine;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable input-field style.</summary>
-    [CreateAssetMenu(fileName = "New Input Field Style", menuName = "LoogaSoft/UI/Design System/Input Field Style")]
     public sealed class LoogaInputFieldStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _inputField;

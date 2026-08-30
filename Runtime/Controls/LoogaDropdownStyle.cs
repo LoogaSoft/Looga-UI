@@ -6,7 +6,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable dropdown style.</summary>
-    [CreateAssetMenu(fileName = "New Dropdown Style", menuName = "LoogaSoft/UI/Design System/Dropdown Style")]
     public sealed class LoogaDropdownStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _dropdown;

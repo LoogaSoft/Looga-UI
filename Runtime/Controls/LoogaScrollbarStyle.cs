@@ -5,7 +5,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable scrollbar style.</summary>
-    [CreateAssetMenu(fileName = "New Scrollbar Style", menuName = "LoogaSoft/UI/Design System/Scrollbar Style")]
     public sealed class LoogaScrollbarStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _scrollbar;

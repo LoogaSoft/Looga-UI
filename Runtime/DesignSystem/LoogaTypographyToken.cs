@@ -4,7 +4,6 @@ using UnityEngine;
 namespace LoogaSoft.UI.Design
 {
     /// <summary>Defines one semantic typography role and its fallback values.</summary>
-    [CreateAssetMenu(fileName = "New Typography Token", menuName = "LoogaSoft/UI/Design System/Typography Token")]
     public sealed class LoogaTypographyToken : LoogaDesignAsset
     {
         [SerializeField] private LoogaTypographySettings _defaults = LoogaTypographySettings.Default;

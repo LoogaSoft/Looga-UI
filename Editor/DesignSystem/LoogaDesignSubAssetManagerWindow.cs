@@ -99,7 +99,9 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
                 for (int i = 0; i < assets.Length; i++)
                 {
-                    if (assets[i] != null && AssetDatabase.IsSubAsset(assets[i]))
+                    if (assets[i] != null &&
+                        AssetDatabase.IsSubAsset(assets[i]) &&
+                        LoogaDesignSystemConsolidator.IsSupportedToken(assets[i]))
                     {
                         _allAssets.Add(assets[i]);
                     }
@@ -129,7 +131,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             if (_summary != null)
             {
                 _summary.text =
-                    $"{_visibleAssets.Count} of {_allAssets.Count} sub-assets. Rename a row and press Enter to apply.";
+                    $"{_visibleAssets.Count} of {_allAssets.Count} token sub-assets. " +
+                    "Rename a row and press Enter to apply.";
             }
             _assetList?.Rebuild();
         }

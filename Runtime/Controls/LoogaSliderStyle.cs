@@ -5,7 +5,6 @@ using UnityEngine.UI;
 namespace LoogaSoft.UI.Controls
 {
     /// <summary>Defines the visual roles for one reusable slider style.</summary>
-    [CreateAssetMenu(fileName = "New Slider Style", menuName = "LoogaSoft/UI/Design System/Slider Style")]
     public sealed class LoogaSliderStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaElementStyle _slider;
