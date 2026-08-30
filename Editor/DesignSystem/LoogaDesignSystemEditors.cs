@@ -28,7 +28,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 SynchronizeStyleLibrary();
             }
 
-            if (GUILayout.Button("Recover Styles to New Asset..."))
+            if (GUILayout.Button("Rebuild and Condense Styles..."))
             {
                 RecoverStyles();
             }
@@ -77,8 +77,9 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             bool confirmed = EditorUtility.DisplayDialog(
                 "Recover Design-System Styles",
                 "This reloads every open scene, captures each UI element's serialized appearance, " +
-                "and creates a new design-system asset. The current asset remains unchanged.",
-                "Recover Styles",
+                "and creates a condensed design-system asset. Exact appearances are shared within semantic " +
+                "roles such as text, icons, backgrounds, borders, and controls. The current asset remains unchanged.",
+                "Rebuild Styles",
                 "Cancel");
             if (!confirmed)
             {

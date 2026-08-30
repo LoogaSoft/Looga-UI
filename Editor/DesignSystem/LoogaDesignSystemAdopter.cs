@@ -778,21 +778,96 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         private static string BuildComponentSemanticKey(Component component, string role)
         {
+            string roleCategory = BuildSemanticCategory(role);
+            if (roleCategory != "Element")
+            {
+                return roleCategory;
+            }
+
             if (component == null)
             {
                 return role;
             }
 
-            List<string> segments = new List<string>();
+            StringBuilder context = new StringBuilder();
             Transform current = component.transform;
-            while (current != null && segments.Count < 3)
+            int depth = 0;
+            while (current != null && depth < 3)
             {
-                segments.Add(CleanObjectName(current.gameObject.name));
+                context.Append(' ').Append(CleanObjectName(current.gameObject.name));
                 current = current.parent;
+                depth++;
             }
 
-            segments.Reverse();
-            return $"{role}:{string.Join("/", segments)}";
+            return BuildSemanticCategory(context.ToString());
+        }
+
+        private static string BuildSemanticCategory(string context)
+        {
+            string value = context.ToLowerInvariant();
+            if (ContainsAny(value, "text", "label", "title", "description", "name", "amount", "quantity",
+                    "value", "price", "cost", "timer", "duration", "level", "weight", "ammo", "stock",
+                    "limit", "caption"))
+            {
+                return "Text";
+            }
+
+            if (ContainsAny(value, "icon", "image", "logo", "portrait", "avatar", "qr", "thumbnail"))
+            {
+                return "Icon";
+            }
+
+            if (ContainsAny(value, "border", "outline", "line", "divider", "diagonal", "tick", "direction",
+                    "marker"))
+            {
+                return "Line / Marker";
+            }
+
+            if (ContainsAny(value, "fill", "progress", "meter", "bar"))
+            {
+                return "Fill / Progress";
+            }
+
+            if (ContainsAny(value, "highlight", "selection", "selected", "hover", "focus", "glow"))
+            {
+                return "Highlight";
+            }
+
+            if (ContainsAny(value, "scroll", "handle", "thumb"))
+            {
+                return "Scrolling";
+            }
+
+            if (ContainsAny(value, "background", " bkg", "panel", "surface", "body", "container", "box",
+                    "viewport", "area"))
+            {
+                return "Background / Container";
+            }
+
+            if (ContainsAny(value, "button", "toggle", "dropdown", "input field", "slider", "control"))
+            {
+                return "Control Surface";
+            }
+
+            if (ContainsAny(value, "gradient", "visual", "decoration", "overlay", "mask", "shadow"))
+            {
+                return "Decoration";
+            }
+
+            return "Element";
+        }
+
+        private static bool ContainsAny(string value, params string[] terms)
+        {
+            for (int i = 0; i < terms.Length; i++)
+            {
+                if (value.Contains(terms[i], StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string BuildTypographyFingerprint(TMP_Text text)
