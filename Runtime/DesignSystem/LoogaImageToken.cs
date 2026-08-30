@@ -9,6 +9,7 @@ namespace LoogaSoft.UI.Design
     {
         [SerializeField] private Sprite _sprite;
         [SerializeField] private Material _material;
+        [SerializeField] private Color _color = Color.white;
         [SerializeField] private Image.Type _type = Image.Type.Simple;
         [SerializeField] private bool _preserveAspect;
         [SerializeField] private bool _fillCenter = true;
@@ -23,7 +24,10 @@ namespace LoogaSoft.UI.Design
         /// <summary>Gets the configured source sprite.</summary>
         public Sprite Sprite => _sprite;
 
-        /// <summary>Applies these values without changing color, alignment, or raycast ownership.</summary>
+        /// <summary>Gets the configured image color.</summary>
+        public Color Color => _color;
+
+        /// <summary>Applies these values without changing raycast ownership.</summary>
         public void Apply(Image image)
         {
             if (image == null)
@@ -33,6 +37,7 @@ namespace LoogaSoft.UI.Design
 
             image.sprite = _sprite;
             image.material = _material;
+            image.color = _color;
             image.type = _type;
             image.preserveAspect = _preserveAspect;
             image.fillCenter = _fillCenter;

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 3.0.1 - 2026-08-30
+
+- Added color and alpha ownership to Image tokens.
+- Changed standalone Color tokens to apply only when no Image token owns the target Image appearance.
+- Clarified Image-versus-color ownership in the style-binding inspector.
+
 ## 3.0.0 - 2026-08-30
 
 - Replaced composite element and typed-control style registration with four direct token families: color, button colors, image, and TextMeshPro text.

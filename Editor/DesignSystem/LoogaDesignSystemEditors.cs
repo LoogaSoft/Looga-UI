@@ -120,6 +120,18 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
+            SerializedProperty color = serializedObject.FindProperty("_color");
+            SerializedProperty image = serializedObject.FindProperty("_image");
+            if (!color.hasMultipleDifferentValues &&
+                !image.hasMultipleDifferentValues &&
+                color.objectReferenceValue != null &&
+                image.objectReferenceValue != null)
+            {
+                EditorGUILayout.HelpBox(
+                    "The Image token owns Image color. Color Only is ignored until the Image token is cleared.",
+                    MessageType.Info);
+            }
+
             EditorGUILayout.Space();
             if (!GUILayout.Button("Apply Tokens"))
             {

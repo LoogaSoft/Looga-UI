@@ -22,9 +22,9 @@ Its core uses normal C# events and Unity lifecycle callbacks. It does not poll a
 
 ### Core Assets
 
-- `LoogaColorToken` defines one reusable color for any `Graphic` or TextMeshPro component.
+- `LoogaColorToken` changes only the color of a `Graphic` or TextMeshPro component.
 - `LoogaButtonColorToken` defines normal, highlighted, pressed, selected, and disabled Unity UI button colors.
-- `LoogaImageToken` defines an Image sprite, material, type, pixels-per-unit multiplier, and type-specific fill settings.
+- `LoogaImageToken` defines a complete Image appearance: sprite, material, color, type, pixels-per-unit multiplier, and type-specific fill settings.
 - `LoogaTextToken` defines TextMeshPro font settings without changing alignment, color, wrapping, or layout intent.
 - `LoogaDesignSystem` registers those four token families for one product.
 - `LoogaStyleBinding` assigns any compatible combination of tokens to components on its GameObject.
@@ -37,8 +37,9 @@ The inspector synchronizes the four registered lists with supported token sub-as
 Use **Manage Token Sub-assets** to search and rename them.
 
 Add `LoogaStyleBinding` to each visual that should use shared styling. Assign only the tokens that apply to that
-GameObject. A button background can use Button Colors, Image, and Color together. A label normally uses Text and
-Color. Child icons and labels receive their own bindings so component ownership stays explicit.
+GameObject. A button background can use Button Colors and Image together. Use Color Only when different locally
+authored visuals should share a tint without changing their sprite or other Image settings. A label normally uses
+Text and Color Only. Child icons and labels receive their own bindings so component ownership stays explicit.
 
 The **New** and **Clone** actions beside token fields create sub-assets in the active design system when it can be
 resolved unambiguously. Changing a token reapplies affected bindings in Edit Mode and at runtime.

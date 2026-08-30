@@ -12,8 +12,11 @@ namespace LoogaSoft.UI.Design
     public sealed class LoogaStyleBinding : MonoBehaviour
     {
         [Header("Tokens")]
+        [InspectorName("Color Only")]
+        [Tooltip("Changes only the target Graphic color. An assigned Image token owns Image color instead.")]
         [SerializeField] private LoogaColorToken _color;
         [SerializeField] private LoogaButtonColorToken _buttonColors;
+        [Tooltip("Changes the complete Image appearance, including color and alpha.")]
         [SerializeField] private LoogaImageToken _image;
         [SerializeField] private LoogaTextToken _text;
 
@@ -27,7 +30,7 @@ namespace LoogaSoft.UI.Design
         /// <summary>Occurs after this binding applies its tokens.</summary>
         public event Action StyleApplied;
 
-        /// <summary>Gets the assigned generic color token.</summary>
+        /// <summary>Gets the assigned color-only token.</summary>
         public LoogaColorToken Color => _color;
 
         /// <summary>Gets the assigned button color token.</summary>
@@ -47,13 +50,14 @@ namespace LoogaSoft.UI.Design
                 ResolveTargets();
             }
 
-            if (_color != null && _graphicTarget != null)
+            _buttonColors?.Apply(_buttonTarget);
+            _image?.Apply(_imageTarget);
+
+            if (_image == null && _color != null && _graphicTarget != null)
             {
                 _graphicTarget.color = _color.DefaultColor;
             }
 
-            _buttonColors?.Apply(_buttonTarget);
-            _image?.Apply(_imageTarget);
             _text?.Apply(_textTarget);
             StyleApplied?.Invoke();
         }
