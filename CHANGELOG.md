@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 4.0.1 - 2026-08-30
+
+- Fixed Menu Preview for panels nested under inactive grouping objects.
+- Restored only the inactive ancestors that Menu Preview temporarily activated.
+
 ## 4.0.0 - 2026-08-30
 
 - Split shared styling into dedicated text, image, control, and color-only assets and binding components.

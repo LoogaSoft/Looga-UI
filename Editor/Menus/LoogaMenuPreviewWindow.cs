@@ -15,6 +15,7 @@ namespace LoogaSoft.Menu.Editor
         private readonly Dictionary<LoogaMenuScreenDefinition, bool> _screenFoldouts = new();
         private readonly Dictionary<LoogaMenuPanelDefinition, List<LoogaMenuPanel>> _panelsByDefinition = new();
         private readonly Dictionary<PreviewKey, GameObject[]> _sceneObjectsByPreview = new();
+        private readonly HashSet<GameObject> _previewActivatedAncestors = new();
         private static readonly string[] NoContextOption = { "No Context" };
         private string[] _contextNames = NoContextOption;
         private LoogaMenuPanel[] _scenePanels = Array.Empty<LoogaMenuPanel>();
@@ -608,6 +609,14 @@ namespace LoogaSoft.Menu.Editor
                 panel.Hide();
                 EditorUtility.SetDirty(panel);
             }
+
+            foreach (GameObject ancestor in _previewActivatedAncestors)
+            {
+                if (ancestor != null && ancestor.activeSelf)
+                    ancestor.SetActive(false);
+            }
+
+            _previewActivatedAncestors.Clear();
         }
 
         private void ShowPanel(LoogaMenuPanelDefinition definition)
@@ -621,8 +630,29 @@ namespace LoogaSoft.Menu.Editor
                 if (panel == null)
                     continue;
 
+                ActivatePanelAncestors(panel);
                 panel.Show();
                 EditorUtility.SetDirty(panel);
+            }
+        }
+
+        private void ActivatePanelAncestors(LoogaMenuPanel panel)
+        {
+            List<GameObject> inactiveAncestors = new();
+            Transform ancestor = panel.transform.parent;
+            while (ancestor != null)
+            {
+                if (!ancestor.gameObject.activeSelf)
+                    inactiveAncestors.Add(ancestor.gameObject);
+
+                ancestor = ancestor.parent;
+            }
+
+            for (int i = inactiveAncestors.Count - 1; i >= 0; i--)
+            {
+                GameObject inactiveAncestor = inactiveAncestors[i];
+                if (_previewActivatedAncestors.Add(inactiveAncestor))
+                    inactiveAncestor.SetActive(true);
             }
         }
 
