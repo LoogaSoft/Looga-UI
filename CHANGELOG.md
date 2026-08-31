@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.0.4 - 2026-08-30
+
+- Matched the left foldout padding to the vertical padding in design-asset reference boxes.
+
 ## 4.0.3 - 2026-08-30
 
 - Kept inline design-asset foldout controls inside their reference boxes.

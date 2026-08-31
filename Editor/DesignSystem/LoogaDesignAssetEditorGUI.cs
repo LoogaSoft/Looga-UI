@@ -12,7 +12,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     internal static class LoogaDesignAssetEditorGUI
     {
         private const float NameButtonWidth = 44f;
-        private const float ReferenceFoldoutInset = 6f;
+        private const float ReferenceFoldoutInset = 12f;
         private const float ReferenceLabelWidth = 112f;
         private const float NewButtonWidth = 38f;
         private const float CloneButtonWidth = 45f;
