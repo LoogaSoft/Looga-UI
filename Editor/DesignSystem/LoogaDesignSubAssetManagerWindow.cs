@@ -101,7 +101,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 {
                     if (assets[i] != null &&
                         AssetDatabase.IsSubAsset(assets[i]) &&
-                        LoogaDesignSystemConsolidator.IsSupportedToken(assets[i]))
+                        LoogaDesignSystemConsolidator.IsSupportedStyle(assets[i]))
                     {
                         _allAssets.Add(assets[i]);
                     }
@@ -131,7 +131,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             if (_summary != null)
             {
                 _summary.text =
-                    $"{_visibleAssets.Count} of {_allAssets.Count} token sub-assets. " +
+                    $"{_visibleAssets.Count} of {_allAssets.Count} design sub-assets. " +
                     "Rename a row and press Enter to apply.";
             }
             _assetList?.Rebuild();

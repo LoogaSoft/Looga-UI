@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 4.0.0 - 2026-08-30
+
+- Split shared styling into dedicated text, image, control, and color-only assets and binding components.
+- Added control-specific style fields for buttons, dropdowns, input fields, scrollbars, sliders, and toggles.
+- Added inline Edit and Save controls for design sub-asset names.
+- Preserved existing image, text, and button-color asset GUIDs while migrating them to the new style types.
+
 ## 3.1.0 - 2026-08-30
 
 - Replaced nested Color-token references in composite styles with literal color fields.

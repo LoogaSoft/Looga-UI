@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 {
-    /// <summary>Synchronizes the four supported token lists with stored sub-assets.</summary>
+    /// <summary>Synchronizes the four supported style lists with stored sub-assets.</summary>
     internal static class LoogaDesignSystemConsolidator
     {
         internal static LoogaDesignSystem FindLoadedDesignSystem()
@@ -42,42 +42,42 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             string path = AssetDatabase.GetAssetPath(designSystem);
             UnityEngine.Object[] storedAssets = AssetDatabase.LoadAllAssetsAtPath(path);
             List<LoogaColorToken> colors = Collect<LoogaColorToken>(storedAssets);
-            List<LoogaButtonColorToken> buttonColors = Collect<LoogaButtonColorToken>(storedAssets);
-            List<LoogaImageToken> images = Collect<LoogaImageToken>(storedAssets);
-            List<LoogaTextToken> texts = Collect<LoogaTextToken>(storedAssets);
+            List<LoogaControlStyle> controls = Collect<LoogaControlStyle>(storedAssets);
+            List<LoogaImageStyle> images = Collect<LoogaImageStyle>(storedAssets);
+            List<LoogaTextStyle> texts = Collect<LoogaTextStyle>(storedAssets);
 
             SerializedObject serializedSystem = new(designSystem);
             int previousEntries = CountEntries(serializedSystem, "_colors") +
-                CountEntries(serializedSystem, "_buttonColors") +
+                CountEntries(serializedSystem, "_controls") +
                 CountEntries(serializedSystem, "_images") +
                 CountEntries(serializedSystem, "_texts");
             int retainedEntries = CountRetained(serializedSystem, "_colors", colors) +
-                CountRetained(serializedSystem, "_buttonColors", buttonColors) +
+                CountRetained(serializedSystem, "_controls", controls) +
                 CountRetained(serializedSystem, "_images", images) +
                 CountRetained(serializedSystem, "_texts", texts);
 
-            Undo.RecordObject(designSystem, "Synchronize UI Token Library");
+            Undo.RecordObject(designSystem, "Synchronize UI Style Library");
             SetArray(serializedSystem, "_colors", colors);
-            SetArray(serializedSystem, "_buttonColors", buttonColors);
+            SetArray(serializedSystem, "_controls", controls);
             SetArray(serializedSystem, "_images", images);
             SetArray(serializedSystem, "_texts", texts);
             serializedSystem.ApplyModifiedProperties();
             EditorUtility.SetDirty(designSystem);
             AssetDatabase.SaveAssets();
 
-            int registered = colors.Count + buttonColors.Count + images.Count + texts.Count;
+            int registered = colors.Count + controls.Count + images.Count + texts.Count;
             return new SynchronizationReport(
                 registered,
                 Mathf.Max(0, registered - retainedEntries),
                 Mathf.Max(0, previousEntries - retainedEntries));
         }
 
-        internal static bool IsSupportedToken(UnityEngine.Object asset)
+        internal static bool IsSupportedStyle(UnityEngine.Object asset)
         {
             return asset is LoogaColorToken or
-                LoogaButtonColorToken or
-                LoogaImageToken or
-                LoogaTextToken;
+                LoogaControlStyle or
+                LoogaImageStyle or
+                LoogaTextStyle;
         }
 
         private static List<T> Collect<T>(IReadOnlyList<UnityEngine.Object> assets)
@@ -148,15 +148,15 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         internal readonly struct SynchronizationReport
         {
-            internal SynchronizationReport(int registeredTokens, int addedTokens, int removedEntries)
+            internal SynchronizationReport(int registeredStyles, int addedStyles, int removedEntries)
             {
-                RegisteredTokens = registeredTokens;
-                AddedTokens = addedTokens;
+                RegisteredStyles = registeredStyles;
+                AddedStyles = addedStyles;
                 RemovedEntries = removedEntries;
             }
 
-            internal int RegisteredTokens { get; }
-            internal int AddedTokens { get; }
+            internal int RegisteredStyles { get; }
+            internal int AddedStyles { get; }
             internal int RemovedEntries { get; }
         }
     }

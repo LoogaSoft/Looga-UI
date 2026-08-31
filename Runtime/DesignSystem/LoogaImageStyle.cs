@@ -1,11 +1,13 @@
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Design
 {
     /// <summary>Defines reusable Unity UI Image component settings.</summary>
-    [CreateAssetMenu(fileName = "New Image Token", menuName = "LoogaSoft/UI/Design System/Image Token")]
-    public sealed class LoogaImageToken : LoogaDesignAsset
+    [MovedFrom(true, "LoogaSoft.UI.Design", null, "LoogaImageToken")]
+    [CreateAssetMenu(fileName = "New Image Style", menuName = "LoogaSoft/UI/Design System/Image Style")]
+    public sealed class LoogaImageStyle : LoogaDesignAsset
     {
         [SerializeField] private Sprite _sprite;
         [SerializeField] private Material _material;

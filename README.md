@@ -17,36 +17,33 @@ See [Menus](Documentation~/Menus.md) for setup and authoring guidance.
 
 ## Design System
 
-The design system stores reusable UGUI and TextMeshPro component settings as direct tokens.
+The design system stores reusable UGUI and TextMeshPro settings as focused style assets.
 Its core uses normal C# events and Unity lifecycle callbacks. It does not poll and does not require R3.
 
 ### Core Assets
 
 - `LoogaColorToken` changes only the color of a `Graphic` or TextMeshPro component.
-- `LoogaButtonColorToken` defines normal, highlighted, pressed, selected, and disabled Unity UI button colors.
-- `LoogaImageToken` defines a complete Image appearance: sprite, material, color, type, pixels-per-unit multiplier, and type-specific fill settings.
-- `LoogaTextToken` defines TextMeshPro font settings without changing alignment, color, wrapping, or layout intent.
-- `LoogaDesignSystem` registers those four token families for one product.
-- `LoogaStyleBinding` assigns any compatible combination of tokens to components on its GameObject.
-- Looga control components retain Unity and TextMeshPro behavior and serialization. Their appearance stays in the normal control fields unless a `LoogaStyleBinding` applies tokens.
+- `LoogaImageStyle` defines a complete Image appearance, including its sprite, material, color, and image mode.
+- `LoogaTextStyle` defines TextMeshPro font settings without changing alignment, color, wrapping, or layout intent.
+- `LoogaControlStyle` defines one button, dropdown, input field, scrollbar, slider, or toggle.
+- Control styles reference the image and text styles required by the selected control type.
+- Separate color, image, text, and control bindings keep component ownership explicit.
 
 ### Recommended Setup
 
-Create a `LoogaDesignSystem`, then use its inspector to create Color, Button Colors, Image, and Text sub-assets.
-The inspector synchronizes the four registered lists with supported token sub-assets stored in the same asset.
-Use **Manage Token Sub-assets** to search and rename them.
+Create a `LoogaDesignSystem`, then create Color, Control, Image, and Text sub-assets in its inspector.
+The inspector synchronizes the four registered lists with supported sub-assets stored in the same asset.
+Use **Manage Design Sub-assets** to search and rename them.
 
-Add `LoogaStyleBinding` to each visual that should use shared styling. Assign only the tokens that apply to that
-GameObject. A button background can use Button Colors and Image together. Use Color Only when different locally
-authored visuals should share a tint without changing their sprite or other Image settings. A label normally uses
-Text and Color Only. Child icons and labels receive their own bindings so component ownership stays explicit.
+Add the matching binding to each visual that uses shared styling. Use `LoogaControlStyleBinding` for a complete
+Unity UI control. Use the image, text, or color binding when one component owns only that visual responsibility.
+Color tokens remain independent and are not nested inside other style assets.
 
-The **New** and **Clone** actions beside token fields create sub-assets in the active design system when it can be
-resolved unambiguously. Assigned tokens expand inline on `LoogaStyleBinding`, so their shared settings can be
-edited without leaving the consuming component. Changing a token reapplies affected bindings in Edit Mode and at runtime.
+The **New** and **Clone** actions beside style fields create sub-assets in the active design system when possible.
+Assigned styles expand inline from their binding components. Each style shows a locked name with an **Edit** button.
+Select **Save** after changing the name. Style changes reapply affected bindings in Edit Mode and at runtime.
 
-Composite legacy styles store literal colors. They do not reference Color tokens. Use Color Only when sharing
-just a component's color is the intended styling responsibility.
+The control-style inspector shows only the child roles and transition settings used by its selected control type.
 
 ### Optional R3 Support
 

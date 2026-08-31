@@ -49,6 +49,20 @@ namespace LoogaSoft.UI.Extensions.R3
                 handler => binding.StyleApplied += handler,
                 handler => binding.StyleApplied -= handler);
         }
+
+        /// <summary>Returns a signal after a split binding applies its style.</summary>
+        public static Observable<Unit> StyleAppliedAsObservable(this LoogaStyleBindingBase binding)
+        {
+            if (binding == null)
+            {
+                throw new ArgumentNullException(nameof(binding));
+            }
+
+            return Observable.FromEvent<Action, Unit>(
+                handler => () => handler(Unit.Default),
+                handler => binding.StyleApplied += handler,
+                handler => binding.StyleApplied -= handler);
+        }
     }
 }
 #endif

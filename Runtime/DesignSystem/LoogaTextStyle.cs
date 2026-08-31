@@ -1,11 +1,13 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace LoogaSoft.UI.Design
 {
     /// <summary>Defines reusable TextMeshPro font settings without changing alignment.</summary>
-    [CreateAssetMenu(fileName = "New Text Token", menuName = "LoogaSoft/UI/Design System/Text Token")]
-    public sealed class LoogaTextToken : LoogaDesignAsset
+    [MovedFrom(true, "LoogaSoft.UI.Design", null, "LoogaTextToken")]
+    [CreateAssetMenu(fileName = "New Text Style", menuName = "LoogaSoft/UI/Design System/Text Style")]
+    public sealed class LoogaTextStyle : LoogaDesignAsset
     {
         [SerializeField] private LoogaTextSettings _defaults = LoogaTextSettings.Default;
 
@@ -19,7 +21,7 @@ namespace LoogaSoft.UI.Design
             NotifyChanged();
         }
 
-        /// <summary>Applies this token to a TextMeshPro component.</summary>
+        /// <summary>Applies this style to a TextMeshPro component.</summary>
         public void Apply(TMP_Text text)
         {
             _defaults.Apply(text);

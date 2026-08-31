@@ -1,24 +1,26 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace LoogaSoft.UI.Design
 {
-    /// <summary>Applies direct design tokens to Unity UI components on one GameObject.</summary>
+    /// <summary>Maintains compatibility with combined style bindings from earlier package versions.</summary>
     [ExecuteAlways]
     [DisallowMultipleComponent]
-    [AddComponentMenu("LoogaSoft/UI/Design System/Style Binding")]
+    [AddComponentMenu("")]
     public sealed class LoogaStyleBinding : MonoBehaviour
     {
-        [Header("Tokens")]
+        [Header("Styles")]
         [InspectorName("Color Only")]
-        [Tooltip("Changes only the target Graphic color. An assigned Image token owns Image color instead.")]
+        [Tooltip("Changes only the target Graphic color. An assigned Image style owns Image color instead.")]
         [SerializeField] private LoogaColorToken _color;
-        [SerializeField] private LoogaButtonColorToken _buttonColors;
+        [FormerlySerializedAs("_buttonColors")]
+        [SerializeField] private LoogaControlStyle _control;
         [Tooltip("Changes the complete Image appearance, including color and alpha.")]
-        [SerializeField] private LoogaImageToken _image;
-        [SerializeField] private LoogaTextToken _text;
+        [SerializeField] private LoogaImageStyle _image;
+        [SerializeField] private LoogaTextStyle _text;
 
         [Header("Targets")]
         [SerializeField] private bool _resolveTargetsAutomatically = true;
@@ -27,22 +29,22 @@ namespace LoogaSoft.UI.Design
         [SerializeField] private Image _imageTarget;
         [SerializeField] private TMP_Text _textTarget;
 
-        /// <summary>Occurs after this binding applies its tokens.</summary>
+        /// <summary>Occurs after this binding applies its styles.</summary>
         public event Action StyleApplied;
 
         /// <summary>Gets the assigned color-only token.</summary>
         public LoogaColorToken Color => _color;
 
-        /// <summary>Gets the assigned button color token.</summary>
-        public LoogaButtonColorToken ButtonColors => _buttonColors;
+        /// <summary>Gets the assigned control style.</summary>
+        public LoogaControlStyle Control => _control;
 
-        /// <summary>Gets the assigned image token.</summary>
-        public LoogaImageToken Image => _image;
+        /// <summary>Gets the assigned image style.</summary>
+        public LoogaImageStyle Image => _image;
 
-        /// <summary>Gets the assigned TextMeshPro token.</summary>
-        public LoogaTextToken Text => _text;
+        /// <summary>Gets the assigned TextMeshPro style.</summary>
+        public LoogaTextStyle Text => _text;
 
-        /// <summary>Applies every assigned token to its compatible target.</summary>
+        /// <summary>Applies every assigned style to its compatible target.</summary>
         public void ApplyStyle()
         {
             if (_resolveTargetsAutomatically)
@@ -50,7 +52,10 @@ namespace LoogaSoft.UI.Design
                 ResolveTargets();
             }
 
-            _buttonColors?.Apply(_buttonTarget);
+            _control?.Apply(
+                _buttonTarget,
+                _buttonTarget != null ? _buttonTarget.GetComponentInChildren<TMP_Text>(true) : null,
+                FindButtonIcon(_buttonTarget));
             _image?.Apply(_imageTarget);
 
             if (_image == null && _color != null && _graphicTarget != null)
@@ -98,12 +103,33 @@ namespace LoogaSoft.UI.Design
         private void HandleDesignChanged(LoogaDesignSystemChange change)
         {
             if (change.Source == _color ||
-                change.Source == _buttonColors ||
+                (_control != null &&
+                 change.Source is LoogaDesignAsset designAsset &&
+                 _control.Uses(designAsset)) ||
                 change.Source == _image ||
                 change.Source == _text)
             {
                 ApplyStyle();
             }
+        }
+
+        private static Image FindButtonIcon(Button button)
+        {
+            if (button == null)
+            {
+                return null;
+            }
+
+            Image[] images = button.GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != button.targetGraphic)
+                {
+                    return images[i];
+                }
+            }
+
+            return null;
         }
     }
 }

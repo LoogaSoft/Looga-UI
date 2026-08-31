@@ -14,18 +14,18 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         {
             DrawDefaultInspector();
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Token Library", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Style Library", EditorStyles.boldLabel);
 
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("New Color"))
                 {
-                    CreateToken<LoogaColorToken>("Color");
+                    CreateStyle<LoogaColorToken>("Color");
                 }
 
-                if (GUILayout.Button("New Button Colors"))
+                if (GUILayout.Button("New Control Style"))
                 {
-                    CreateToken<LoogaButtonColorToken>("Button Colors");
+                    CreateStyle<LoogaControlStyle>("Control Style");
                 }
             }
 
@@ -33,21 +33,21 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             {
                 if (GUILayout.Button("New Image"))
                 {
-                    CreateToken<LoogaImageToken>("Image");
+                    CreateStyle<LoogaImageStyle>("Image Style");
                 }
 
                 if (GUILayout.Button("New Text"))
                 {
-                    CreateToken<LoogaTextToken>("Text");
+                    CreateStyle<LoogaTextStyle>("Text Style");
                 }
             }
 
-            if (GUILayout.Button("Synchronize Token Library"))
+            if (GUILayout.Button("Synchronize Style Library"))
             {
-                SynchronizeTokenLibrary();
+                SynchronizeStyleLibrary();
             }
 
-            if (GUILayout.Button("Manage Token Sub-assets..."))
+            if (GUILayout.Button("Manage Design Sub-assets..."))
             {
                 LoogaDesignSubAssetManagerWindow.Open((LoogaDesignSystem)target);
             }
@@ -64,11 +64,11 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
         }
 
-        private void CreateToken<T>(string label) where T : LoogaDesignAsset
+        private void CreateStyle<T>(string label) where T : LoogaDesignAsset
         {
             LoogaDesignSystem designSystem = (LoogaDesignSystem)target;
             string path = AssetDatabase.GetAssetPath(designSystem);
-            T token = CreateInstance<T>();
+            T style = CreateInstance<T>();
             Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
             string[] names = new string[assets.Length];
             for (int i = 0; i < assets.Length; i++)
@@ -76,25 +76,25 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 names[i] = assets[i].name;
             }
 
-            token.name = ObjectNames.GetUniqueName(
+            style.name = ObjectNames.GetUniqueName(
                 names,
                 $"New {label}");
-            AssetDatabase.AddObjectToAsset(token, designSystem);
-            Undo.RegisterCreatedObjectUndo(token, $"Create {label} Token");
-            EditorUtility.SetDirty(token);
+            AssetDatabase.AddObjectToAsset(style, designSystem);
+            Undo.RegisterCreatedObjectUndo(style, $"Create {label}");
+            EditorUtility.SetDirty(style);
             AssetDatabase.SaveAssets();
-            SynchronizeTokenLibrary();
-            Selection.activeObject = token;
-            EditorGUIUtility.PingObject(token);
+            SynchronizeStyleLibrary();
+            Selection.activeObject = style;
+            EditorGUIUtility.PingObject(style);
         }
 
-        private void SynchronizeTokenLibrary()
+        private void SynchronizeStyleLibrary()
         {
             LoogaDesignSystemConsolidator.SynchronizationReport report =
                 LoogaDesignSystemConsolidator.Synchronize((LoogaDesignSystem)target);
             _synchronizationSummary =
-                $"Registered {report.RegisteredTokens} token(s). " +
-                $"Added {report.AddedTokens}; removed {report.RemovedEntries} null, duplicate, or stale entries.";
+                $"Registered {report.RegisteredStyles} style asset(s). " +
+                $"Added {report.AddedStyles}; removed {report.RemovedEntries} null, duplicate, or stale entries.";
             serializedObject.Update();
         }
 
@@ -108,8 +108,16 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 bindings[i].ApplyStyle();
             }
 
+            LoogaStyleBindingBase[] splitBindings = Object.FindObjectsByType<LoogaStyleBindingBase>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            for (int i = 0; i < splitBindings.Length; i++)
+            {
+                splitBindings[i].ApplyStyle();
+            }
+
             SceneView.RepaintAll();
-            Debug.Log($"Looga UI applied {bindings.Length} token binding(s) in open scenes.");
+            Debug.Log($"Looga UI applied {bindings.Length + splitBindings.Length} style binding(s) in open scenes.");
         }
     }
 
@@ -118,7 +126,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     public sealed class LoogaStyleBindingEditor : UnityEditor.Editor
     {
         private SerializedProperty _color;
-        private SerializedProperty _buttonColors;
+        private SerializedProperty _control;
         private SerializedProperty _image;
         private SerializedProperty _text;
         private SerializedProperty _resolveTargetsAutomatically;
@@ -130,7 +138,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         private void OnEnable()
         {
             _color = serializedObject.FindProperty("_color");
-            _buttonColors = serializedObject.FindProperty("_buttonColors");
+            _control = serializedObject.FindProperty("_control");
             _image = serializedObject.FindProperty("_image");
             _text = serializedObject.FindProperty("_text");
             _resolveTargetsAutomatically = serializedObject.FindProperty("_resolveTargetsAutomatically");
@@ -144,11 +152,11 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         {
             serializedObject.Update();
 
-            EditorGUILayout.LabelField("Tokens", EditorStyles.boldLabel);
-            DrawExposedToken(_color, "Color Only", typeof(LoogaColorToken));
-            DrawExposedToken(_buttonColors, "Button Colors", typeof(LoogaButtonColorToken));
-            DrawExposedToken(_image, "Image", typeof(LoogaImageToken));
-            DrawExposedToken(_text, "Text", typeof(LoogaTextToken));
+            EditorGUILayout.LabelField("Styles", EditorStyles.boldLabel);
+            LoogaDesignAssetEditorGUI.DrawExposedReference(_color, "Color Only", typeof(LoogaColorToken));
+            LoogaDesignAssetEditorGUI.DrawExposedReference(_control, "Control", typeof(LoogaControlStyle));
+            LoogaDesignAssetEditorGUI.DrawExposedReference(_image, "Image", typeof(LoogaImageStyle));
+            LoogaDesignAssetEditorGUI.DrawExposedReference(_text, "Text", typeof(LoogaTextStyle));
 
             if (!_color.hasMultipleDifferentValues &&
                 !_image.hasMultipleDifferentValues &&
@@ -156,7 +164,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 _image.objectReferenceValue != null)
             {
                 EditorGUILayout.HelpBox(
-                    "The Image token owns Image color. Color Only is ignored until the Image token is cleared.",
+                    "The Image style owns Image color. Color Only is ignored until the Image style is cleared.",
                     MessageType.Info);
             }
 
@@ -170,7 +178,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.Space();
-            if (!GUILayout.Button("Apply Tokens"))
+            if (!GUILayout.Button("Apply Styles"))
             {
                 return;
             }
@@ -184,85 +192,132 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
         }
 
-        private void DrawExposedToken(SerializedProperty property, string label, System.Type assetType)
+    }
+
+    [CustomEditor(typeof(LoogaStyleBindingBase), true)]
+    [CanEditMultipleObjects]
+    internal sealed class LoogaSplitStyleBindingEditor : UnityEditor.Editor
+    {
+        private SerializedProperty _style;
+
+        private void OnEnable()
         {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            _style = serializedObject.FindProperty("_style");
+        }
+
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+            LoogaDesignAssetEditorGUI.DrawExposedReference(
+                _style,
+                GetStyleLabel(),
+                GetStyleType());
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Targets", EditorStyles.boldLabel);
+            DrawTargets();
+            serializedObject.ApplyModifiedProperties();
+
+            if (target is LoogaControlStyleBinding controlBinding &&
+                !controlBinding.HasCompatibleTarget)
             {
-                using (new EditorGUILayout.HorizontalScope())
+                EditorGUILayout.HelpBox(
+                    "The target component does not match the control type selected by the style.",
+                    MessageType.Warning);
+            }
+
+            EditorGUILayout.Space();
+            if (!GUILayout.Button("Apply Style"))
+            {
+                return;
+            }
+
+            for (int i = 0; i < targets.Length; i++)
+            {
+                if (targets[i] is LoogaStyleBindingBase binding)
                 {
-                    property.isExpanded = GUILayout.Toggle(
-                        property.isExpanded,
-                        label,
-                        EditorStyles.foldout,
-                        GUILayout.Width(112f));
-
-                    EditorGUI.BeginChangeCheck();
-                    Object value = EditorGUILayout.ObjectField(
-                        property.objectReferenceValue,
-                        assetType,
-                        false);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        property.objectReferenceValue = value;
-                    }
-
-                    bool multipleTargets = serializedObject.isEditingMultipleObjects;
-                    using (new EditorGUI.DisabledScope(multipleTargets))
-                    {
-                        if (GUILayout.Button("New", EditorStyles.miniButton, GUILayout.Width(38f)))
-                        {
-                            LoogaDesignAssetReferenceDrawer.CreateAndAssign(property, assetType, null);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-
-                    bool canClone = !multipleTargets && property.objectReferenceValue is LoogaDesignAsset;
-                    using (new EditorGUI.DisabledScope(!canClone))
-                    {
-                        if (GUILayout.Button("Clone", EditorStyles.miniButton, GUILayout.Width(45f)))
-                        {
-                            LoogaDesignAssetReferenceDrawer.CreateAndAssign(
-                                property,
-                                assetType,
-                                property.objectReferenceValue as LoogaDesignAsset);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-                }
-
-                if (property.isExpanded &&
-                    !property.hasMultipleDifferentValues &&
-                    property.objectReferenceValue != null)
-                {
-                    DrawInlineAsset(property.objectReferenceValue);
+                    binding.ApplyStyle();
                 }
             }
         }
 
-        private static void DrawInlineAsset(Object asset)
+        private string GetStyleLabel()
         {
-            SerializedObject nestedObject = new(asset);
-            nestedObject.Update();
-            SerializedProperty iterator = nestedObject.GetIterator();
-            bool enterChildren = true;
-
-            EditorGUI.indentLevel++;
-            while (iterator.NextVisible(enterChildren))
+            return target switch
             {
-                enterChildren = false;
-                if (iterator.propertyPath == "m_Script")
-                {
-                    continue;
-                }
+                LoogaColorBinding => "Color Only",
+                LoogaImageStyleBinding => "Image Style",
+                LoogaTextStyleBinding => "Text Style",
+                LoogaControlStyleBinding => "Control Style",
+                _ => "Style"
+            };
+        }
 
-                EditorGUILayout.PropertyField(iterator, true);
-            }
-            EditorGUI.indentLevel--;
-
-            if (nestedObject.ApplyModifiedProperties())
+        private System.Type GetStyleType()
+        {
+            return target switch
             {
-                EditorUtility.SetDirty(asset);
+                LoogaColorBinding => typeof(LoogaColorToken),
+                LoogaImageStyleBinding => typeof(LoogaImageStyle),
+                LoogaTextStyleBinding => typeof(LoogaTextStyle),
+                LoogaControlStyleBinding => typeof(LoogaControlStyle),
+                _ => typeof(LoogaDesignAsset)
+            };
+        }
+
+        private void DrawTargets()
+        {
+            if (target is LoogaControlStyleBinding)
+            {
+                DrawControlTargets();
+                return;
             }
+
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("_resolveTargetAutomatically"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("_target"));
+        }
+
+        private void DrawControlTargets()
+        {
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("_resolveTargetsAutomatically"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("_controlTarget"));
+
+            if (_style.hasMultipleDifferentValues ||
+                _style.objectReferenceValue is not LoogaControlStyle controlStyle)
+            {
+                return;
+            }
+
+            switch (controlStyle.ControlType)
+            {
+                case LoogaControlType.Button:
+                    DrawTarget("_buttonLabel");
+                    DrawTarget("_buttonIcon");
+                    break;
+                case LoogaControlType.Dropdown:
+                    DrawTarget("_dropdownArrow");
+                    break;
+                case LoogaControlType.InputField:
+                    DrawTarget("_inputText");
+                    DrawTarget("_inputPlaceholder");
+                    break;
+                case LoogaControlType.Scrollbar:
+                    DrawTarget("_scrollbarHandle");
+                    break;
+                case LoogaControlType.Slider:
+                    DrawTarget("_sliderFill");
+                    DrawTarget("_sliderHandle");
+                    break;
+                case LoogaControlType.Toggle:
+                    DrawTarget("_toggleCheckmark");
+                    DrawTarget("_toggleLabel");
+                    break;
+            }
+        }
+
+        private void DrawTarget(string propertyName)
+        {
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(propertyName));
         }
     }
 }
