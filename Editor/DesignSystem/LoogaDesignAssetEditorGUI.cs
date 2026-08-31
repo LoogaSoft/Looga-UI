@@ -12,6 +12,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     internal static class LoogaDesignAssetEditorGUI
     {
         private const float NameButtonWidth = 44f;
+        private const float ReferenceFoldoutInset = 6f;
         private const float ReferenceLabelWidth = 112f;
         private const float NewButtonWidth = 38f;
         private const float CloneButtonWidth = 45f;
@@ -145,7 +146,13 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 Rect row = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
-                Rect foldoutRect = new(row.x, row.y, Mathf.Min(ReferenceLabelWidth, row.width), row.height);
+                Rect foldoutRect = new(
+                    row.x + ReferenceFoldoutInset,
+                    row.y,
+                    Mathf.Max(
+                        0f,
+                        Mathf.Min(ReferenceLabelWidth, row.width - ReferenceFoldoutInset)),
+                    row.height);
                 Rect cloneRect = new(row.xMax - CloneButtonWidth, row.y, CloneButtonWidth, row.height);
                 Rect newRect = new(cloneRect.x - NewButtonWidth, row.y, NewButtonWidth, row.height);
                 Rect fieldRect = new(

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.0.3 - 2026-08-30
+
+- Kept inline design-asset foldout controls inside their reference boxes.
+
 ## 4.0.2 - 2026-08-30
 
 - Matched Image style field visibility to the configured Unity UI Image type.
