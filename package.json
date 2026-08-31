@@ -2,7 +2,7 @@
   "displayName": "Looga UI",
   "name": "com.loogasoft.loogaui",
   "description": "A designer-first UGUI package for menu architecture, design systems, layouts, effects, procedural graphics, masking, and shared UI utilities.",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "author": {
     "name": "LoogaSoft"
   },

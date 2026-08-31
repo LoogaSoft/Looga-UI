@@ -12,6 +12,45 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
     internal static class LoogaDesignAssetEditorGUI
     {
         private const float NameButtonWidth = 44f;
+        private const float ReferenceLabelWidth = 112f;
+        private const float NewButtonWidth = 38f;
+        private const float CloneButtonWidth = 45f;
+
+        private static readonly GUIContent[] HorizontalOrigins =
+        {
+            new("Left"),
+            new("Right")
+        };
+
+        private static readonly GUIContent[] VerticalOrigins =
+        {
+            new("Bottom"),
+            new("Top")
+        };
+
+        private static readonly GUIContent[] Radial90Origins =
+        {
+            new("Bottom Left"),
+            new("Top Left"),
+            new("Top Right"),
+            new("Bottom Right")
+        };
+
+        private static readonly GUIContent[] Radial180Origins =
+        {
+            new("Bottom"),
+            new("Left"),
+            new("Top"),
+            new("Right")
+        };
+
+        private static readonly GUIContent[] Radial360Origins =
+        {
+            new("Bottom"),
+            new("Right"),
+            new("Top"),
+            new("Left")
+        };
 
         internal static void DrawAsset(LoogaDesignAsset asset)
         {
@@ -80,6 +119,12 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
 
         internal static void DrawAssetFields(LoogaDesignAsset asset)
         {
+            if (asset is LoogaImageStyle imageStyle)
+            {
+                DrawImageStyle(imageStyle);
+                return;
+            }
+
             if (asset is LoogaControlStyle controlStyle)
             {
                 DrawControlStyle(controlStyle);
@@ -99,45 +144,53 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                Rect row = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                Rect foldoutRect = new(row.x, row.y, Mathf.Min(ReferenceLabelWidth, row.width), row.height);
+                Rect cloneRect = new(row.xMax - CloneButtonWidth, row.y, CloneButtonWidth, row.height);
+                Rect newRect = new(cloneRect.x - NewButtonWidth, row.y, NewButtonWidth, row.height);
+                Rect fieldRect = new(
+                    foldoutRect.xMax,
+                    row.y,
+                    Mathf.Max(0f, newRect.x - foldoutRect.xMax),
+                    row.height);
+
+                property.isExpanded = EditorGUI.Foldout(
+                    foldoutRect,
+                    property.isExpanded,
+                    label,
+                    true);
+
+                EditorGUI.BeginChangeCheck();
+                Object value = EditorGUI.ObjectField(
+                    fieldRect,
+                    property.objectReferenceValue,
+                    assetType,
+                    false);
+                if (EditorGUI.EndChangeCheck())
                 {
-                    property.isExpanded = GUILayout.Toggle(
-                        property.isExpanded,
-                        label,
-                        EditorStyles.foldout,
-                        GUILayout.Width(112f));
+                    property.objectReferenceValue = value;
+                }
 
-                    EditorGUI.BeginChangeCheck();
-                    Object value = EditorGUILayout.ObjectField(
-                        property.objectReferenceValue,
-                        assetType,
-                        false);
-                    if (EditorGUI.EndChangeCheck())
+                bool multipleTargets = property.serializedObject.isEditingMultipleObjects;
+                using (new EditorGUI.DisabledScope(multipleTargets || assetType.IsAbstract))
+                {
+                    if (GUI.Button(newRect, "New", EditorStyles.miniButton))
                     {
-                        property.objectReferenceValue = value;
+                        LoogaDesignAssetReferenceDrawer.CreateAndAssign(property, assetType, null);
+                        GUIUtility.ExitGUI();
                     }
+                }
 
-                    bool multipleTargets = property.serializedObject.isEditingMultipleObjects;
-                    using (new EditorGUI.DisabledScope(multipleTargets || assetType.IsAbstract))
+                bool canClone = !multipleTargets && property.objectReferenceValue is LoogaDesignAsset;
+                using (new EditorGUI.DisabledScope(!canClone))
+                {
+                    if (GUI.Button(cloneRect, "Clone", EditorStyles.miniButton))
                     {
-                        if (GUILayout.Button("New", EditorStyles.miniButton, GUILayout.Width(38f)))
-                        {
-                            LoogaDesignAssetReferenceDrawer.CreateAndAssign(property, assetType, null);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-
-                    bool canClone = !multipleTargets && property.objectReferenceValue is LoogaDesignAsset;
-                    using (new EditorGUI.DisabledScope(!canClone))
-                    {
-                        if (GUILayout.Button("Clone", EditorStyles.miniButton, GUILayout.Width(45f)))
-                        {
-                            LoogaDesignAssetReferenceDrawer.CreateAndAssign(
-                                property,
-                                assetType,
-                                property.objectReferenceValue as LoogaDesignAsset);
-                            GUIUtility.ExitGUI();
-                        }
+                        LoogaDesignAssetReferenceDrawer.CreateAndAssign(
+                            property,
+                            assetType,
+                            property.objectReferenceValue as LoogaDesignAsset);
+                        GUIUtility.ExitGUI();
                     }
                 }
 
@@ -150,6 +203,98 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                     EditorGUI.indentLevel--;
                 }
             }
+        }
+
+        private static void DrawImageStyle(LoogaImageStyle style)
+        {
+            SerializedObject serializedStyle = new(style);
+            serializedStyle.Update();
+
+            SerializedProperty spriteProperty = serializedStyle.FindProperty("_sprite");
+            SerializedProperty typeProperty = serializedStyle.FindProperty("_type");
+            EditorGUILayout.PropertyField(spriteProperty, new GUIContent("Source Image"));
+            DrawProperties(serializedStyle, "_color", "_material");
+
+            if (spriteProperty.objectReferenceValue is Sprite sprite)
+            {
+                EditorGUILayout.PropertyField(typeProperty, new GUIContent("Image Type"));
+                Image.Type type = (Image.Type)typeProperty.enumValueIndex;
+                switch (type)
+                {
+                    case Image.Type.Simple:
+                        DrawProperties(serializedStyle, "_useSpriteMesh", "_preserveAspect");
+                        break;
+                    case Image.Type.Sliced:
+                        DrawSlicedOrTiledFields(serializedStyle, sprite);
+                        break;
+                    case Image.Type.Tiled:
+                        DrawSlicedOrTiledFields(serializedStyle, sprite);
+                        break;
+                    case Image.Type.Filled:
+                        DrawFilledFields(serializedStyle);
+                        break;
+                }
+
+                EditorGUILayout.PropertyField(
+                    serializedStyle.FindProperty("_alphaHitTestMinimumThreshold"));
+            }
+
+            ApplyChanges(serializedStyle, style);
+        }
+
+        private static void DrawSlicedOrTiledFields(SerializedObject serializedStyle, Sprite sprite)
+        {
+            if (sprite.border.sqrMagnitude > 0f)
+            {
+                EditorGUILayout.PropertyField(serializedStyle.FindProperty("_fillCenter"));
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "This sprite has no border. Configure a border in the Sprite Editor for sliced or tiled rendering.",
+                    MessageType.Warning);
+            }
+
+            EditorGUILayout.PropertyField(serializedStyle.FindProperty("_pixelsPerUnitMultiplier"));
+        }
+
+        private static void DrawFilledFields(SerializedObject serializedStyle)
+        {
+            EditorGUILayout.PropertyField(serializedStyle.FindProperty("_preserveAspect"));
+            SerializedProperty methodProperty = serializedStyle.FindProperty("_fillMethod");
+            SerializedProperty originProperty = serializedStyle.FindProperty("_fillOrigin");
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(methodProperty);
+            if (EditorGUI.EndChangeCheck())
+            {
+                originProperty.intValue = 0;
+            }
+
+            Image.FillMethod method = (Image.FillMethod)methodProperty.enumValueIndex;
+            GUIContent[] originLabels = GetFillOriginLabels(method);
+            originProperty.intValue = EditorGUILayout.Popup(
+                new GUIContent("Fill Origin"),
+                Mathf.Clamp(originProperty.intValue, 0, originLabels.Length - 1),
+                originLabels);
+            EditorGUILayout.PropertyField(serializedStyle.FindProperty("_fillAmount"));
+
+            if (method > Image.FillMethod.Vertical)
+            {
+                EditorGUILayout.PropertyField(serializedStyle.FindProperty("_fillClockwise"));
+            }
+        }
+
+        private static GUIContent[] GetFillOriginLabels(Image.FillMethod method)
+        {
+            return method switch
+            {
+                Image.FillMethod.Horizontal => HorizontalOrigins,
+                Image.FillMethod.Vertical => VerticalOrigins,
+                Image.FillMethod.Radial90 => Radial90Origins,
+                Image.FillMethod.Radial180 => Radial180Origins,
+                _ => Radial360Origins
+            };
         }
 
         private static void DrawControlStyle(LoogaControlStyle style)

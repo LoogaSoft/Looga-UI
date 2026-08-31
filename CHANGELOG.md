@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 4.0.2 - 2026-08-30
+
+- Matched Image style field visibility to the configured Unity UI Image type.
+- Prevented invalid alpha hit-test threshold writes for unreadable or Crunch-compressed sprites.
+- Aligned inline design-asset reference fields and removed spacing before New and Clone actions.
+
 ## 4.0.1 - 2026-08-30
 
 - Fixed Menu Preview for panels nested under inactive grouping objects.

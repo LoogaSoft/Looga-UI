@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.UI;
 
@@ -49,7 +50,25 @@ namespace LoogaSoft.UI.Design
             image.fillAmount = _fillAmount;
             image.fillClockwise = _fillClockwise;
             image.fillOrigin = _fillOrigin;
-            image.alphaHitTestMinimumThreshold = _alphaHitTestMinimumThreshold;
+            ApplyAlphaHitTestMinimumThreshold(image);
+        }
+
+        private void ApplyAlphaHitTestMinimumThreshold(Image image)
+        {
+            float threshold = Mathf.Clamp01(_alphaHitTestMinimumThreshold);
+            if (Mathf.Approximately(image.alphaHitTestMinimumThreshold, threshold))
+            {
+                return;
+            }
+
+            Texture2D texture = image.sprite != null ? image.sprite.texture : null;
+            if (texture != null &&
+                (!texture.isReadable || GraphicsFormatUtility.IsCrunchFormat(texture.format)))
+            {
+                return;
+            }
+
+            image.alphaHitTestMinimumThreshold = threshold;
         }
     }
 }
