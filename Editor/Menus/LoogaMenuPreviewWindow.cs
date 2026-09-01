@@ -220,7 +220,7 @@ namespace LoogaSoft.Menu.Editor
                     () => SelectSceneObjects(screen, layout));
                 layoutRow.style.height = 34f;
                 layoutRow.style.marginLeft = 8f;
-                layoutRow.style.marginRight = 8f;
+                layoutRow.style.marginRight = 0f;
                 layoutRow.style.marginTop = 2f;
                 layoutRow.style.marginBottom = 0f;
                 layoutRow.style.paddingLeft = 6f;
@@ -229,7 +229,7 @@ namespace LoogaSoft.Menu.Editor
             }
 
             VisualElement bottomPadding = new();
-            bottomPadding.style.height = 7f;
+            bottomPadding.style.height = 2f;
             foldout.Add(bottomPadding);
             return foldout;
         }
