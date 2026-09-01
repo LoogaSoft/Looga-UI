@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added component-settings and default-values choices when bindings create new style assets.
+
 ## 4.0.4 - 2026-08-30
 
 - Matched the left foldout padding to the vertical padding in design-asset reference boxes.

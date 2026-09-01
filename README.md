@@ -39,7 +39,8 @@ Add the matching binding to each visual that uses shared styling. Use `LoogaCont
 Unity UI control. Use the image, text, or color binding when one component owns only that visual responsibility.
 Color tokens remain independent and are not nested inside other style assets.
 
-The **New** and **Clone** actions beside style fields create sub-assets in the active design system when possible.
+The **New** action can copy the binding target's current component settings or use safe default values.
+The **New** and **Clone** actions create sub-assets in the active design system when possible.
 Assigned styles expand inline from their binding components. Each style shows a locked name with an **Edit** button.
 Select **Save** after changing the name. Style changes reapply affected bindings in Edit Mode and at runtime.
 

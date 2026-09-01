@@ -53,7 +53,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 GUIContent newContent = new GUIContent("New", $"Create and assign a new {GetAssetKind(assetType)}.");
                 if (GUI.Button(newRect, newContent, EditorStyles.miniButton))
                 {
-                    CreateAndAssign(property, assetType, null);
+                    ShowCreateMenu(newRect, property, assetType);
                 }
             }
 
@@ -101,7 +101,8 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
         internal static void CreateAndAssign(
             SerializedProperty property,
             Type assetType,
-            LoogaDesignAsset source)
+            LoogaDesignAsset source,
+            Component componentSource = null)
         {
             LoogaDesignAsset created = source != null
                 ? UnityEngine.Object.Instantiate(source)
@@ -121,6 +122,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             }
 
             Undo.RegisterCreatedObjectUndo(created, undoName);
+            LoogaDesignAssetComponentCapture.Apply(created, componentSource);
             property.objectReferenceValue = created;
             property.serializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(property.serializedObject.targetObject);
@@ -132,6 +134,61 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
             if (mainAsset is LoogaDesignSystem designSystem)
             {
                 LoogaDesignSystemConsolidator.Synchronize(designSystem);
+            }
+        }
+
+        internal static void ShowCreateMenu(
+            Rect buttonRect,
+            SerializedProperty property,
+            Type assetType)
+        {
+            UnityEngine.Object owner = property.serializedObject.targetObject;
+            if (owner is not Component || !LoogaDesignAssetComponentCapture.Supports(assetType))
+            {
+                CreateAndAssign(property, assetType, null);
+                return;
+            }
+
+            string propertyPath = property.propertyPath;
+            Component componentSource = LoogaDesignAssetComponentCapture.ResolveSource(owner, assetType);
+            GenericMenu menu = new();
+            GUIContent componentOption = new(LoogaDesignAssetComponentCapture.GetOptionLabel(assetType));
+            if (componentSource != null)
+            {
+                menu.AddItem(
+                    componentOption,
+                    false,
+                    () => CreateFromMenu(owner, propertyPath, assetType, componentSource));
+            }
+            else
+            {
+                menu.AddDisabledItem(componentOption);
+            }
+
+            menu.AddItem(
+                new GUIContent("Use Default Values"),
+                false,
+                () => CreateFromMenu(owner, propertyPath, assetType, null));
+            menu.DropDown(GUIUtility.GUIToScreenRect(buttonRect));
+        }
+
+        private static void CreateFromMenu(
+            UnityEngine.Object owner,
+            string propertyPath,
+            Type assetType,
+            Component componentSource)
+        {
+            if (owner == null)
+            {
+                return;
+            }
+
+            SerializedObject serializedOwner = new(owner);
+            serializedOwner.Update();
+            SerializedProperty property = serializedOwner.FindProperty(propertyPath);
+            if (property != null)
+            {
+                CreateAndAssign(property, assetType, null, componentSource);
             }
         }
 

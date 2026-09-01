@@ -183,7 +183,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 {
                     if (GUI.Button(newRect, "New", EditorStyles.miniButton))
                     {
-                        LoogaDesignAssetReferenceDrawer.CreateAndAssign(property, assetType, null);
+                        LoogaDesignAssetReferenceDrawer.ShowCreateMenu(newRect, property, assetType);
                         GUIUtility.ExitGUI();
                     }
                 }
