@@ -169,7 +169,7 @@ namespace LoogaSoft.UI.Extensions.Editor.DesignSystem
                 new GUIContent("Use Default Values"),
                 false,
                 () => CreateFromMenu(owner, propertyPath, assetType, null));
-            menu.DropDown(GUIUtility.GUIToScreenRect(buttonRect));
+            menu.DropDown(buttonRect);
         }
 
         private static void CreateFromMenu(
