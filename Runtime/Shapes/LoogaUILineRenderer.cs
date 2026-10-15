@@ -56,6 +56,7 @@ namespace LoogaSoft.UI.Extensions
             LoogaUIShapeMeshUtility.AddPolyline(vh, LocalPoints, _width, color, _closed, _cap, _join, _roundSegments, _dashed, _dashLength, _gapLength, _dashOffset);
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
@@ -66,6 +67,7 @@ namespace LoogaSoft.UI.Extensions
             _points ??= new List<Vector2>();
             SetVerticesDirty();
         }
+#endif
 
         void BuildLocalPoints(Rect rect, List<Vector2> localPoints)
         {

@@ -56,11 +56,13 @@ namespace LoogaSoft.UI.Extensions
             }
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
             _segments = Mathf.Clamp(_segments, 3, 256);
             SetVerticesDirty();
         }
+#endif
     }
 }

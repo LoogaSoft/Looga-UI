@@ -57,6 +57,7 @@ namespace LoogaSoft.UI.Extensions
             }
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
@@ -66,6 +67,7 @@ namespace LoogaSoft.UI.Extensions
             SyncCornerRadii();
             SetVerticesDirty();
         }
+#endif
 
         void SyncCornerRadii()
         {

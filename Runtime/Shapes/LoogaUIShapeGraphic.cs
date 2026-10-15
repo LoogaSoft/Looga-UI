@@ -52,12 +52,14 @@ namespace LoogaSoft.UI.Extensions
             return _strokeColor * color;
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
             _strokeWidth = Mathf.Max(0f, _strokeWidth);
             SetVerticesDirty();
         }
+#endif
 
         float LinearGradientT(Vector2 position, Rect rect)
         {

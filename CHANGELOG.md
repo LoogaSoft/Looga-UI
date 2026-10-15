@@ -4,6 +4,7 @@
 
 - Added component-settings and default-values choices when bindings create new style assets.
 - Fixed design-asset creation menus opening away from their inspector buttons.
+- Fixed player build errors (CS0115): the UI shape `OnValidate` overrides now compile only in the editor.
 
 ## 4.0.4 - 2026-08-30
 
